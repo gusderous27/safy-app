@@ -32,6 +32,25 @@ const supa = {
     return r.json();
   },
 
+  signInGoogle() {
+    const redirectTo = encodeURIComponent(window.location.origin + window.location.pathname);
+    window.location.href = SUPA_URL + "/auth/v1/authorize?provider=google&redirect_to=" + redirectTo;
+  },
+
+  async getSessionFromHash() {
+    // Supabase redirige con access_token en el hash después de OAuth
+    const hash = window.location.hash;
+    if (!hash) return null;
+    const params = new URLSearchParams(hash.replace("#", ""));
+    const token = params.get("access_token");
+    const refresh = params.get("refresh_token");
+    if (!token) return null;
+    // Limpiar el hash de la URL
+    window.history.replaceState(null, "", window.location.pathname);
+    const user = await this.getUser(token);
+    return { token, refresh, user, email: user.email };
+  },
+
   async getUser(token) {
     const r = await fetch(SUPA_URL + "/auth/v1/user", {
       headers: { ...this.headers, "Authorization": "Bearer " + token }
@@ -628,12 +647,12 @@ const LoginScreen = ({onLogin,isRegistro}) => {
         <div style={{fontWeight:700,fontSize:18,color:"#1a1a2e",marginBottom:4}}>{isRegistro?"Crear cuenta":"Ingresar"}</div>
         <div style={{fontSize:13,color:"#888"}}>{isRegistro?"Elegí cómo querés registrarte":"Bienvenido de vuelta"}</div>
       </div>
-      <div style={{background:"#fffbf3",borderRadius:14,padding:"12px 16px",marginBottom:20,border:"1.5px solid #F4A261"}}>
-        <div style={{fontSize:12,color:"#c97e1a",fontWeight:700,marginBottom:4}}>🔐 Auth real con Supabase</div>
-        <div style={{fontSize:12,color:"#666",lineHeight:1.4}}>
-          Tu cuenta se guarda de forma segura. Email + contraseña o link mágico sin contraseña.
-        </div>
-      </div>
+      {/* Google OAuth */}
+      <button onClick={()=>supa.signInGoogle()}
+        style={{width:"100%",padding:"14px",borderRadius:14,border:"1.5px solid #e0e0ef",background:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,color:"#1a1a2e",fontFamily:"inherit",marginBottom:10,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+        <GLogo/> Continuar con Google
+      </button>
+      <Divider label="o con email"/>
       <button onClick={()=>setMode("email")}
         style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:"#1a1a2e",color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:10,fontFamily:"inherit"}}>
         ✉️ Continuar con email
@@ -1480,9 +1499,35 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
 
 export default function Safy() {
   const [phase,setPhase] = useState("splash");
-  const [authData,setAuthData] = useState(null); // { token, user, email }
+  const [authData,setAuthData] = useState(null);
   const [userRol,setUserRol] = useState(null);
   const [userData,setUserData] = useState({});
+
+  // Detectar retorno de Google OAuth
+  useEffect(()=>{
+    const checkOAuth = async () => {
+      if(window.location.hash.includes("access_token")) {
+        const session = await supa.getSessionFromHash();
+        if(session) {
+          setAuthData(session);
+          // Verificar si ya tiene perfil en DB
+          try {
+            const profile = await supa.getProfile(session.token, session.user.id);
+            if(profile && profile.rol) {
+              setUserRol(profile.rol);
+              setUserData(profile);
+              setPhase("app");
+            } else {
+              setPhase("onboarding");
+            }
+          } catch(e) {
+            setPhase("onboarding");
+          }
+        }
+      }
+    };
+    checkOAuth();
+  },[]);
 
   if(phase==="splash"||phase==="welcome_in") return (
     <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#1a1a2e",minHeight:"100vh",maxWidth:420,margin:"0 auto",position:"relative",overflow:"hidden"}}>
