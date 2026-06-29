@@ -885,13 +885,13 @@ const ResumenOnboarding = ({rol,data,onConfirm,loading}) => {
           ["Ciudad", [data.ciudad,data.provincia,PAISES.find(p=>p.v===data.pais)?.l].filter(Boolean).join(", ")||"—"],
           ["Skills", (data.skills||[]).slice(0,3).join(", ")||(data.skills?.length>3?" y más":"—")],
           ["Honorarios", data.tarifa?((data.moneda==="USD"?"U$D":"$")+data.tarifa+"/h"):"No indicado"],
-        ]):(([
+        ]):([
           ["Empresa", data.empresa||"—"],
           ["Contacto", data.contacto||"—"],
           ["Ciudad", [data.ciudad,data.provincia].filter(Boolean).join(", ")||"—"],
           ["Busca", data.tipoBusqueda?({est:"Estudiante",tec:"Técnico",lic:"Licenciado",ing:"Ingeniero",cualquiera:"Cualquiera"}[data.tipoBusqueda]||data.tipoBusqueda):"—"],
           ["Sector", data.sectorObra||"—"],
-        ]))).map(([k,v])=>(
+        ])).map(([k,v])=>(
           <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:8,paddingBottom:8,borderBottom:"1px solid #f5f5f5"}}>
             <span style={{fontSize:13,color:"#888",fontWeight:600}}>{k}</span>
             <span style={{fontSize:13,color:"#1a1a2e",fontWeight:700,textAlign:"right",maxWidth:"60%"}}>{v}</span>
