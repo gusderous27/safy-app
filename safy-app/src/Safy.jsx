@@ -784,11 +784,11 @@ const StepPro2 = ({data,set,onNext}) => {
 const StepPro3 = ({data,set,onNext}) => {
   const [skills,setSkills] = useState(data.skills||[]);
   const [sectores,setSectores] = useState(data.sectores||[]);
-  const [obras,setObras_] = useState(data.obras||[]);
+  const [obras,setObras] = useState(data.obras||[]);
   const [tarifa,setTarifa] = useState(data.tarifa||"");
   const [moneda,setMoneda] = useState(data.moneda||"ARS");
   const [seguro,setSeguro] = useState(data.seguro!==undefined?data.seguro:null);
-  const next = () => { set({...data,skills,sectores,obras:obras_,tarifa,moneda,seguro}); onNext(); };
+  const next = () => { set({...data,skills,sectores,obras,tarifa,moneda,seguro}); onNext(); };
   return (
     <div style={{padding:"24px 20px 32px"}}>
       <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Skills, disponibilidad y honorarios</div>
@@ -800,7 +800,7 @@ const StepPro3 = ({data,set,onNext}) => {
           {SECTORES.map(s=>(<Chip key={s} selected={sectores.includes(s)} onClick={()=>setSectores(c=>c.includes(s)?c.filter(x=>x!==s):[...c,s])}>{s}</Chip>))}
         </div>
       </div>
-      <ObrasInput obras={obras_} onChange={setObras_}/>
+      <ObrasInput obras={obras} onChange={setObras}/>
       <Honorarios value={tarifa} moneda={moneda} onValue={setTarifa} onMoneda={setMoneda}/>
       <ToggleSeguro pais={data.pais} value={seguro} onChange={setSeguro}/>
       <Btn onClick={next} disabled={skills.length<2}>Ver resumen</Btn>
