@@ -867,7 +867,19 @@ const StepEmp2 = ({data,set,onNext}) => {
 
 const ResumenOnboarding = ({rol,data,onConfirm,loading}) => {
   const esPro = rol==="profesional";
-  const t = getT(data.pais||"AR");
+  const filas = esPro ? [
+    ["Nombre", ((data.nombre||"")+" "+(data.apellido||"")).trim()],
+    ["Título", TITULOS[data.titulo]||data.titulo||"—"],
+    ["Ciudad", [data.ciudad,data.provincia,PAISES.find(p=>p.v===data.pais)?.l].filter(Boolean).join(", ")||"—"],
+    ["Skills", (data.skills||[]).slice(0,3).join(", ")||"—"],
+    ["Honorarios", data.tarifa?((data.moneda==="USD"?"U$D":"$")+data.tarifa+"/h"):"No indicado"],
+  ] : [
+    ["Empresa", data.empresa||"—"],
+    ["Contacto", data.contacto||"—"],
+    ["Ciudad", [data.ciudad,data.provincia].filter(Boolean).join(", ")||"—"],
+    ["Busca", ({est:"Estudiante",tec:"Técnico",lic:"Licenciado",ing:"Ingeniero",cualquiera:"Cualquiera"}[data.tipoBusqueda])||data.tipoBusqueda||"—"],
+    ["Sector", data.sectorObra||"—"],
+  ];
   return (
     <div style={{padding:"24px 20px 40px"}}>
       <div style={{textAlign:"center",marginBottom:24}}>
@@ -879,19 +891,7 @@ const ResumenOnboarding = ({rol,data,onConfirm,loading}) => {
         <div style={{fontWeight:700,fontSize:13,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,marginBottom:12}}>
           {esPro?"Tu perfil":"Tu empresa"}
         </div>
-        {esPro?([
-          ["Nombre", (data.nombre||""+" "+(data.apellido||"")).trim()],
-          ["Título", TITULOS[data.titulo]||data.titulo||"—"],
-          ["Ciudad", [data.ciudad,data.provincia,PAISES.find(p=>p.v===data.pais)?.l].filter(Boolean).join(", ")||"—"],
-          ["Skills", (data.skills||[]).slice(0,3).join(", ")||(data.skills?.length>3?" y más":"—")],
-          ["Honorarios", data.tarifa?((data.moneda==="USD"?"U$D":"$")+data.tarifa+"/h"):"No indicado"],
-        ]):([
-          ["Empresa", data.empresa||"—"],
-          ["Contacto", data.contacto||"—"],
-          ["Ciudad", [data.ciudad,data.provincia].filter(Boolean).join(", ")||"—"],
-          ["Busca", data.tipoBusqueda?({est:"Estudiante",tec:"Técnico",lic:"Licenciado",ing:"Ingeniero",cualquiera:"Cualquiera"}[data.tipoBusqueda]||data.tipoBusqueda):"—"],
-          ["Sector", data.sectorObra||"—"],
-        ])).map(([k,v])=>(
+        {filas.map(([k,v])=>(
           <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:8,paddingBottom:8,borderBottom:"1px solid #f5f5f5"}}>
             <span style={{fontSize:13,color:"#888",fontWeight:600}}>{k}</span>
             <span style={{fontSize:13,color:"#1a1a2e",fontWeight:700,textAlign:"right",maxWidth:"60%"}}>{v}</span>
@@ -1534,6 +1534,8 @@ export default function Safy() {
       </div>
     </div>
   );
+
+  if(phase==="welcome") return (
     <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#1a1a2e",minHeight:"100vh",maxWidth:420,margin:"0 auto",overflow:"hidden"}}>
       <style>{CSS}</style>
       <WelcomeScreen onEntrar={()=>setPhase("login")} onRegistrarse={()=>setPhase("registro")} visible={true}/>
