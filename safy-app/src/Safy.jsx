@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, createElement } from "react";
 
 // ─── SUPABASE ────────────────────────────────────────────────────────────────
 
@@ -985,7 +985,7 @@ const Onboarding = ({authData,onComplete}) => {
       <div style={{flex:1,overflowY:"auto"}}>
         {isResumen
           ? <ResumenOnboarding rol={rol} data={data} onConfirm={handleConfirm} loading={saving}/>
-          : React.createElement(pasos[step-1],{data,set:setData,onNext:()=>setStep(s=>s+1)})
+          : createElement(pasos[step-1],{data,set:setData,onNext:()=>setStep(s=>s+1)})
         }
       </div>
     </div>
