@@ -33,22 +33,61 @@ const supa = {
   },
 
   signInGoogle() {
-    const redirectTo = encodeURIComponent(window.location.origin + window.location.pathname);
+    const redirectTo = encodeURIComponent(window.location.href);
     window.location.href = SUPA_URL + "/auth/v1/authorize?provider=google&redirect_to=" + redirectTo;
   },
 
-  async getSessionFromHash() {
-    // Supabase redirige con access_token en el hash después de OAuth
+  async getSessionFromURL() {
+    // Intentar hash primero (flujo implícito)
     const hash = window.location.hash;
-    if (!hash) return null;
-    const params = new URLSearchParams(hash.replace("#", ""));
-    const token = params.get("access_token");
-    const refresh = params.get("refresh_token");
-    if (!token) return null;
-    // Limpiar el hash de la URL
-    window.history.replaceState(null, "", window.location.pathname);
-    const user = await this.getUser(token);
-    return { token, refresh, user, email: user.email };
+    if (hash && hash.includes("access_token")) {
+      const params = new URLSearchParams(hash.replace("#", ""));
+      const token = params.get("access_token");
+      if (token) {
+        window.history.replaceState(null, "", window.location.pathname);
+        try {
+          const user = await this.getUser(token);
+          if (user && user.id) return { token, user, email: user.email };
+        } catch(e) {}
+      }
+    }
+    // Intentar query params (flujo PKCE)
+    const search = window.location.search;
+    if (search && search.includes("code=")) {
+      const params = new URLSearchParams(search);
+      const code = params.get("code");
+      if (code) {
+        try {
+          const r = await fetch(SUPA_URL + "/auth/v1/token?grant_type=pkce", {
+            method: "POST", headers: this.headers,
+            body: JSON.stringify({ auth_code: code })
+          });
+          const data = await r.json();
+          if (data.access_token) {
+            window.history.replaceState(null, "", window.location.pathname);
+            const user = await this.getUser(data.access_token);
+            return { token: data.access_token, user, email: user.email };
+          }
+        } catch(e) {}
+      }
+    }
+    // Intentar sesión guardada en localStorage
+    try {
+      const stored = localStorage.getItem("safy_session");
+      if (stored) {
+        const session = JSON.parse(stored);
+        if (session.token && session.user) return session;
+      }
+    } catch(e) {}
+    return null;
+  },
+
+  saveSession(session) {
+    try { localStorage.setItem("safy_session", JSON.stringify(session)); } catch(e) {}
+  },
+
+  clearSession() {
+    try { localStorage.removeItem("safy_session"); } catch(e) {}
   },
 
   async getUser(token) {
@@ -226,62 +265,11 @@ const SECTORES = [
 const DIAS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 const ADMIN_CODE = "safy2025";
 
-// Profesionales demo (seed) — se reemplazarán con data real de Supabase
-const profesionales = [
-  {id:"demo-1",nombre:"Carla",apellido:"Méndez",titulo:"lic",ciudad:"Buenos Aires",pais:"AR",
-   distancia:3,tarifa:2800,moneda:"ARS",disponible:true,
-   perfil:"8 años en obra civil y plantas industriales. Especialidad en altura y espacios confinados.",
-   obras:["Torre Catalinas Norte","Planta YPF Ensenada"],
-   avatar:"CM",color:"#E63946",skills:["Trabajo en Altura","NFPA 70E","Ergonomía"],
-   rating:4.8,trabajos:34,email:"carla.mendez@gmail.com",tel:"+54 9 11 4421-0033"},
-  {id:"demo-2",nombre:"Roberto",apellido:"Funes",titulo:"tec",ciudad:"Rosario",pais:"AR",
-   distancia:12,tarifa:1900,moneda:"ARS",disponible:true,
-   perfil:"6 años en obras viales y minería. Manejo de explosivos certificado.",
-   obras:["Ruta Nacional 9","Viaducto Mendoza"],
-   avatar:"RF",color:"#2A9D8F",skills:["Seguridad Vial","Análisis de Riesgos"],
-   rating:4.6,trabajos:21,email:"rfunes@gmail.com",tel:"+54 9 341 558-2290"},
-  {id:"demo-3",nombre:"Sofía",apellido:"Peralta",titulo:"ing",ciudad:"Córdoba",pais:"AR",
-   distancia:7,tarifa:35,moneda:"USD",disponible:false,
-   perfil:"12 años. Especialista en riesgo eléctrico y auditorías. Certificada IRAM.",
-   obras:["EPEC Central Térmica","Volkswagen Pacheco"],
-   avatar:"SP",color:"#7B2D8B",skills:["Riesgo Eléctrico","ISO 45001","Auditorías"],
-   rating:4.9,trabajos:57,email:"sofia.peralta@gmail.com",tel:"+54 9 351 442-1100"},
-  {id:"demo-4",nombre:"Diego",apellido:"Acuña",titulo:"tec",ciudad:"Mendoza",pais:"AR",
-   distancia:5,tarifa:2100,moneda:"ARS",disponible:true,
-   perfil:"4 años en industria vitivinícola. Certificado HACCP.",
-   obras:["Bodega Catena Zapata","Planta Nestlé"],
-   avatar:"DA",color:"#F4A261",skills:["Ergonomía","Capacitaciones"],
-   rating:4.4,trabajos:18,email:"diegoacuna@gmail.com",tel:"+54 9 261 334-7788"},
-  {id:"demo-5",nombre:"Valeria",apellido:"Sosa",titulo:"lic",ciudad:"La Plata",pais:"AR",
-   distancia:9,tarifa:2600,moneda:"ARS",disponible:true,
-   perfil:"7 años en infraestructura y hospitales. Especialista en residuos peligrosos.",
-   obras:["Hospital El Cruce","Puerto La Plata"],
-   avatar:"VS",color:"#264653",skills:["Res. Peligrosos","Gestión de Emergencias"],
-   rating:4.7,trabajos:29,email:"valeria.sosa@gmail.com",tel:"+54 9 221 445-9922"},
-];
+// Profesionales — se cargan desde Supabase (vacío hasta tener usuarios reales)
+const profesionales = [];
 
-const OBRAS_SEED = [
-  {id:101,empresa:"Constructora Omega S.A.",tipo:"Obra civil",ciudad:"Buenos Aires",
-   distancia:2,presupuesto:3200,moneda:"ARS",duracion:"3 meses",urgente:true,
-   descripcion:"Torre de 22 pisos en Palermo. Programa de seguridad, recorridas y APT.",
-   requisitos:["Licenciado o Técnico","Exp. en altura"],
-   avatar:"CO",color:"#E63946",email:"rrhh@omega.com.ar",tel:"+54 11 4800-0000"},
-  {id:102,empresa:"Petroquímica del Sur",tipo:"Industria petroquímica",ciudad:"Bahía Blanca",
-   distancia:14,presupuesto:4100,moneda:"ARS",duracion:"6 meses",urgente:false,
-   descripcion:"Planta de refinación. Programa anual y gestión de emergencias.",
-   requisitos:["Ingeniero o Licenciado","NFPA"],
-   avatar:"PS",color:"#2A9D8F",email:"seguridad@petrosur.com",tel:"+54 291 4500-100"},
-  {id:103,empresa:"Vial Patagónica SA",tipo:"Obra vial",ciudad:"Neuquén",
-   distancia:22,presupuesto:2700,moneda:"ARS",duracion:"4 meses",urgente:true,
-   descripcion:"Pavimentación Ruta 22. Programa de Seguridad y supervisión diaria.",
-   requisitos:["Técnico o Licenciado","Exp. vial"],
-   avatar:"VP",color:"#F4A261",email:"obras@vialpatagonicasa.com",tel:"+54 299 4400-200"},
-  {id:104,empresa:"Laboratorios Biol",tipo:"Industria farmacéutica",ciudad:"Buenos Aires",
-   distancia:6,presupuesto:40,moneda:"USD",duracion:"Indefinido",urgente:false,
-   descripcion:"Relación de dependencia. Gestión integral SyH, ISO 45001 y auditorías.",
-   requisitos:["Licenciado o Ingeniero","ISO 45001"],
-   avatar:"LB",color:"#7B2D8B",email:"rrhh@biol.com",tel:"+54 11 5200-8800"},
-];
+// Obras seed — vacías hasta tener datos reales en Supabase
+const OBRAS_SEED = [];
 
 // ─── CSS ─────────────────────────────────────────────────────────────────────
 
@@ -1503,26 +1491,25 @@ export default function Safy() {
   const [userRol,setUserRol] = useState(null);
   const [userData,setUserData] = useState({});
 
-  // Detectar retorno de Google OAuth
+  // Detectar retorno de Google OAuth o sesión guardada
   useEffect(()=>{
     const checkOAuth = async () => {
-      if(window.location.hash.includes("access_token")) {
-        const session = await supa.getSessionFromHash();
-        if(session) {
-          setAuthData(session);
-          // Verificar si ya tiene perfil en DB
-          try {
-            const profile = await supa.getProfile(session.token, session.user.id);
-            if(profile && profile.rol) {
-              setUserRol(profile.rol);
-              setUserData(profile);
-              setPhase("app");
-            } else {
-              setPhase("onboarding");
-            }
-          } catch(e) {
+      const session = await supa.getSessionFromURL();
+      if(session) {
+        supa.saveSession(session);
+        setAuthData(session);
+        setPhase("loading");
+        try {
+          const profile = await supa.getProfile(session.token, session.user.id);
+          if(profile && profile.rol) {
+            setUserRol(profile.rol);
+            setUserData(profile);
+            setPhase("app");
+          } else {
             setPhase("onboarding");
           }
+        } catch(e) {
+          setPhase("onboarding");
         }
       }
     };
@@ -1537,7 +1524,16 @@ export default function Safy() {
     </div>
   );
 
-  if(phase==="welcome") return (
+  if(phase==="loading") return (
+    <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#1a1a2e",minHeight:"100vh",maxWidth:420,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontWeight:800,fontSize:48,color:"#fff",letterSpacing:-2,marginBottom:16}}>S<span style={{color:"#F4A261"}}>afy</span></div>
+        <div style={{display:"flex",gap:8,justifyContent:"center"}}>
+          {[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:"#F4A261",animation:"dotPulse 1.2s ease "+(i*0.2)+"s infinite"}}/>)}
+        </div>
+      </div>
+    </div>
+  );
     <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#1a1a2e",minHeight:"100vh",maxWidth:420,margin:"0 auto",overflow:"hidden"}}>
       <style>{CSS}</style>
       <WelcomeScreen onEntrar={()=>setPhase("login")} onRegistrarse={()=>setPhase("registro")} visible={true}/>
@@ -1577,6 +1573,7 @@ export default function Safy() {
   return (
     <MainApp userRol={userRol} userData={userData} authData={authData}
       onLogout={()=>{
+        supa.clearSession();
         setPhase("welcome");
         setUserRol(null);
         setUserData({});
