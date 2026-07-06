@@ -5,6 +5,16 @@ import { useState, useRef, useEffect, createElement } from "react";
 const SUPA_URL = "https://ojslewybmcayfmvuhqsc.supabase.co";
 const SUPA_KEY = "sb_publishable_JmENOILK3rOPz9-0IqcA1A_1or2An5-";
 
+// ─── HAVERSINE — distancia entre dos coordenadas en km ───────────────────────
+const haversine = (lat1, lng1, lat2, lng2) => {
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLng = (lng2-lng1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+};
+
 const supa = {
   headers: { "Content-Type": "application/json", "apikey": SUPA_KEY, "Authorization": "Bearer " + SUPA_KEY },
 
@@ -91,6 +101,17 @@ const supa = {
     // Si devuelve error de Supabase (usuario eliminado, etc)
     if(d && d.code) { this.clearSession(); return null; }
     return Array.isArray(d) ? (d[0] || null) : null;
+  },
+
+  async getProfiles(token, rolUsuario) {
+    const targetRol = rolUsuario === "empresa" ? "profesional" : "empresa";
+    const r = await fetch(
+      SUPA_URL + "/rest/v1/profiles?rol=eq." + targetRol + "&select=*&order=created_at.desc&limit=50",
+      { headers: { ...this.headers, "Authorization": "Bearer " + (token || SUPA_KEY) } }
+    );
+    if(!r.ok) return [];
+    const d = await r.json();
+    return Array.isArray(d) ? d : [];
   },
 
   async getJobs(token) {
@@ -516,13 +537,21 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
 
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20}}>
-      <label style={{position:"relative",cursor:"pointer",display:"inline-block"}}>
+      <div style={{position:"relative",marginBottom:8}}>
         <Av init={init} color={color||"#1a1a2e"} size={size} foto={foto}/>
         <div style={{position:"absolute",bottom:0,right:0,width:28,height:28,borderRadius:"50%",
           background:"#1a1a2e",border:"2px solid #fff",
           display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>
           📷
         </div>
+      </div>
+      <label style={{
+        display:"inline-block",padding:"7px 16px",borderRadius:99,
+        background:"#f0f0f8",border:"1.5px solid #e0e0ef",
+        fontSize:12,fontWeight:600,color:"#1a1a2e",
+        cursor:"pointer",userSelect:"none",
+      }}>
+        {foto ? "Cambiar foto" : "Subir foto"}
         <input
           type="file"
           accept="image/*"
@@ -530,9 +559,6 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
           style={{display:"none"}}
         />
       </label>
-      <div style={{fontSize:12,color:"#888",marginTop:8,textAlign:"center"}}>
-        {foto?"Tocá para cambiar la foto":"Tocá para agregar foto de perfil"}
-      </div>
     </div>
   );
 };
@@ -1535,11 +1561,70 @@ const StepPro1 = ({data,set,onNext}) => {
   const [em,setEm] = useState(data.email||"");
   const [tel,setTel] = useState(data.tel||"");
   const [geo,setGeo] = useState({pais:data.pais||"",provincia:data.provincia||"",ciudad:data.ciudad||""});
-  const [ra,setRa] = useState(data.radio||"");
+  const [ra,setRa] = useState(data.radio||30);
+  const [geoLoading,setGeoLoading] = useState(false);
+  const [geoError,setGeoError] = useState("");
+  const [coords,setCoords] = useState({lat:data.lat||null,lng:data.lng||null});
   const emailOk = em.includes("@") && em.includes(".");
   const ok = n && ap && emailOk && geo.ciudad;
   const init = n&&ap ? (n[0]+ap[0]).toUpperCase() : "?";
-  const next = () => { set({...data,foto,nombre:n,apellido:ap,email:em,tel,...geo,radio:ra}); onNext(); };
+
+  // Auto-detectar ubicación al montar el componente
+  useEffect(()=>{
+    if(geo.ciudad) return; // Ya tiene ubicación, no forzar
+    if(!navigator.geolocation) return;
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async pos => {
+        try {
+          const {latitude,longitude} = pos.coords;
+          setCoords({lat:latitude,lng:longitude});
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=es`);
+          const d = await r.json();
+          const addr = d.address || {};
+          // Mapear país
+          const countryCode = (addr.country_code||"").toUpperCase();
+          const paisMap = {AR:"AR",MX:"MX",CO:"CO",CL:"CL",PE:"PE",UY:"UY",PY:"PY",BO:"BO",EC:"EC",VE:"VE",BR:"BR",ES:"ES",US:"US"};
+          const pais = paisMap[countryCode] || "otro";
+          const provincia = addr.state || addr.region || "";
+          const ciudad = addr.city || addr.town || addr.village || addr.municipality || "";
+          if(ciudad) setGeo({pais, provincia, ciudad});
+        } catch(e) {}
+        setGeoLoading(false);
+      },
+      () => { setGeoLoading(false); },
+      {timeout:8000, maximumAge:60000}
+    );
+  },[]);
+
+  const detectarManual = () => {
+    if(!navigator.geolocation) { setGeoError("Tu navegador no soporta geolocalización"); return; }
+    setGeoLoading(true); setGeoError("");
+    navigator.geolocation.getCurrentPosition(
+      async pos => {
+        try {
+          const {latitude,longitude} = pos.coords;
+          setCoords({lat:latitude,lng:longitude});
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=es`);
+          const d = await r.json();
+          const addr = d.address || {};
+          const countryCode = (addr.country_code||"").toUpperCase();
+          const paisMap = {AR:"AR",MX:"MX",CO:"CO",CL:"CL",PE:"PE",UY:"UY",PY:"PY",BO:"BO",EC:"EC",VE:"VE",BR:"BR",ES:"ES",US:"US"};
+          const pais = paisMap[countryCode] || "otro";
+          const provincia = addr.state || addr.region || "";
+          const ciudad = addr.city || addr.town || addr.village || addr.municipality || "";
+          if(ciudad) { setGeo({pais, provincia, ciudad}); }
+          else { setGeoError("No pudimos detectar tu ciudad. Completá manualmente."); }
+        } catch(e) { setGeoError("Error al obtener ubicación. Completá manualmente."); }
+        setGeoLoading(false);
+      },
+      () => { setGeoError("Permiso denegado. Completá tu ubicación manualmente."); setGeoLoading(false); },
+      {timeout:8000}
+    );
+  };
+
+  const next = () => { set({...data,foto,nombre:n,apellido:ap,email:em,tel,...geo,radio:ra,lat:coords.lat,lng:coords.lng}); onNext(); };
+
   return (
     <div style={{padding:"24px 20px 32px"}}>
       <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Tus datos personales</div>
@@ -1559,8 +1644,57 @@ const StepPro1 = ({data,set,onNext}) => {
       <Inp label="Apellido *" placeholder="Ej: De Rose" value={ap} onChange={setAp}/>
       <Inp label="Email" optional type="email" placeholder="tucorreo@gmail.com" value={em} onChange={setEm}/>
       <Inp label="Teléfono" optional type="tel" placeholder="+54 9 11..." value={tel} onChange={setTel}/>
+
+      {/* Geolocalización */}
+      {geoLoading ? (
+        <div style={{background:"#f0fdf4",borderRadius:12,padding:"12px 14px",marginBottom:16,
+          display:"flex",alignItems:"center",gap:10,border:"1.5px solid #86efac"}}>
+          <div style={{width:16,height:16,borderRadius:"50%",border:"2px solid #86efac",
+            borderTopColor:"#2A9D8F",animation:"spin .7s linear infinite",flexShrink:0}}/>
+          <span style={{fontSize:13,color:"#15803d",fontWeight:600}}>Detectando tu ubicación...</span>
+        </div>
+      ) : geo.ciudad ? (
+        <div style={{background:"#f0fdf4",borderRadius:12,padding:"10px 14px",marginBottom:8,
+          border:"1.5px solid #86efac",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:16}}>📍</span>
+            <div>
+              <div style={{fontSize:12,color:"#15803d",fontWeight:700}}>Ubicación detectada</div>
+              <div style={{fontSize:12,color:"#166534"}}>{[geo.ciudad,geo.provincia,PAISES.find(p=>p.v===geo.pais)?.l].filter(Boolean).join(", ")}</div>
+            </div>
+          </div>
+          <button onClick={()=>setGeo({pais:"",provincia:"",ciudad:""})}
+            style={{background:"none",border:"none",color:"#aaa",fontSize:18,cursor:"pointer",fontFamily:"inherit"}}>×</button>
+        </div>
+      ) : (
+        <button onClick={detectarManual}
+          style={{width:"100%",padding:"11px",borderRadius:12,border:"1.5px dashed #2A9D8F",
+            background:"transparent",color:"#2A9D8F",fontWeight:600,fontSize:13,
+            cursor:"pointer",marginBottom:8,fontFamily:"inherit",display:"flex",
+            alignItems:"center",justifyContent:"center",gap:8}}>
+          📍 Detectar mi ubicación automáticamente
+        </button>
+      )}
+      {geoError&&<div style={{fontSize:12,color:"#E63946",marginBottom:8}}>{geoError}</div>}
       <GeoSel pais={geo.pais} provincia={geo.provincia} ciudad={geo.ciudad} onChange={setGeo}/>
-      <Inp label="Radio de trabajo (km)" optional type="number" placeholder="Ej: 30" value={ra} onChange={setRa}/>
+
+      {/* Slider de radio */}
+      <div style={{marginBottom:18}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>Radio de trabajo</label>
+          <span style={{fontSize:14,fontWeight:800,color:"#1a1a2e",background:"#f0f0f8",
+            padding:"3px 10px",borderRadius:99}}>{ra} km</span>
+        </div>
+        <input type="range" min={5} max={200} step={5} value={ra}
+          onChange={e=>setRa(Number(e.target.value))}
+          style={{width:"100%",accentColor:"#1a1a2e",height:4}}/>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#aaa",marginTop:4}}>
+          <span>5 km</span>
+          <span>100 km</span>
+          <span>200 km</span>
+        </div>
+      </div>
+
       <Btn onClick={next} disabled={!ok}>Continuar</Btn>
     </div>
   );
@@ -1777,12 +1911,21 @@ const StepEmp2 = ({data,set,onNext}) => {
         options={[{v:"",l:"Seleccioná..."},...SECTORES.map(s=>({v:s,l:s}))]}/>
       <Inp label="Zona de trabajo" optional placeholder="Ej: Palermo, CABA" value={zona} onChange={setZona}/>
       <div style={{marginBottom:18}}>
-        <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:6}}>
-          Radio de búsqueda <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
-        </label>
-        <div style={{fontWeight:800,fontSize:20,color:"#1a1a2e",marginBottom:6}}>{rad} km</div>
-        <input type="range" min={5} max={150} step={5} value={rad}
-          onChange={e=>setRad(Number(e.target.value))} style={{width:"100%",accentColor:"#1a1a2e"}}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>
+            Radio de búsqueda <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+          </label>
+          <span style={{fontSize:14,fontWeight:800,color:"#1a1a2e",background:"#f0f0f8",
+            padding:"3px 10px",borderRadius:99}}>{rad} km</span>
+        </div>
+        <input type="range" min={5} max={200} step={5} value={rad}
+          onChange={e=>setRad(Number(e.target.value))}
+          style={{width:"100%",accentColor:"#1a1a2e",height:4}}/>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#aaa",marginTop:4}}>
+          <span>5 km</span>
+          <span>100 km</span>
+          <span>200 km</span>
+        </div>
       </div>
       <div style={{marginBottom:18}}>
         <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
@@ -1893,6 +2036,7 @@ const Onboarding = ({onComplete, googleData}) => {
     nombre:   gd.nombre   || "",
     apellido: gd.apellido || "",
     email:    gd.email    || "",
+    foto:     gd.foto     || "",
     pais:     gd.pais     || "",
     provincia:gd.provincia|| "",
     ciudad:   gd.ciudad   || "",
@@ -2641,7 +2785,7 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
                 {!isPro&&p.urgente&&<Chip selected color="#E63946">URGENTE</Chip>}
               </div>
               <div style={{fontSize:12,color:"#555",marginTop:5}}>
-                {p.ciudad} · {p.distancia} km
+                {p.ciudad}{(p.distanciaReal!=null) ? ` · ${p.distanciaReal} km de vos` : p.distancia ? ` · ${p.distancia} km` : ""}
               </div>
               {isPro&&p.rating&&(
                 <div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}>
@@ -2973,7 +3117,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 
-const MainApp = ({userRol,userData:init0,obras:initObras,setObrasRoot,onLogout,esPrimerLogin=false}) => {
+const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,onLogout,esPrimerLogin=false}) => {
   const esEmpresa = userRol==="empresa";
   const [tab,setTab]                   = useState(esEmpresa?"mis_busquedas":"swipe");
   const [vista,setVista]               = useState("profesional");
@@ -2992,6 +3136,8 @@ const MainApp = ({userRol,userData:init0,obras:initObras,setObrasRoot,onLogout,e
   const [showNueva,setShowNueva]       = useState(false);
   const [postViendo,setPostViendo]     = useState(null);
   const [showTour,setShowTour]         = useState(esPrimerLogin);
+  const [dbProfiles,setDbProfiles]     = useState([]);
+  const [loadingProfiles,setLoadingProfiles] = useState(false);
   // Profesional no necesita obras de Root — empresa sí
   const [obrasLocales, setObrasLocales] = useState(esEmpresa ? (initObras||[]) : (initObras||[]));
   const obras = obrasLocales;
@@ -3013,6 +3159,49 @@ const MainApp = ({userRol,userData:init0,obras:initObras,setObrasRoot,onLogout,e
 
   // obras = todas las obras disponibles (feed para profesionales)
   // Si es empresa: sus propias obras son las que tienen su nombre
+  // Cargar perfiles reales de Supabase al montar
+  useEffect(()=>{
+    const loadProfiles = async () => {
+      setLoadingProfiles(true);
+      try {
+        const profiles = await supa.getProfiles(authData?.token, userRol);
+        if(Array.isArray(profiles) && profiles.length > 0) {
+          // Mapear perfiles de DB al formato de la app
+          const mapped = profiles.map(p => ({
+            ...p,
+            id: p.id,
+            nombre: p.nombre || "Sin nombre",
+            apellido: p.apellido || "",
+            avatar: p.nombre ? (p.nombre[0]+(p.apellido?p.apellido[0]:"")).toUpperCase() : "??",
+            color: "#2A9D8F",
+            skills: p.skills || [],
+            obras: [],
+            perfil: p.perfil || "",
+            disponible: p.disponible !== false,
+            tarifa: p.tarifa || 0,
+            moneda: p.moneda || "ARS",
+            rating: null,
+            // Calcular distancia real si ambos tienen coords
+            distanciaReal: (userData.lat && userData.lng && p.lat && p.lng)
+              ? Math.round(haversine(userData.lat, userData.lng, p.lat, p.lng))
+              : null,
+          }));
+
+          // Filtrar por radio si el usuario tiene coordenadas
+          const radioKm = Number(userData.radio) || 9999;
+          const filtrados = mapped.filter(p => {
+            if(!userData.lat || !userData.lng || !p.lat || !p.lng) return true; // Sin coords, mostrar igual
+            return p.distanciaReal <= radioKm;
+          });
+
+          setDbProfiles(filtrados);
+        }
+      } catch(e) { console.log("Error cargando perfiles:", e); }
+      setLoadingProfiles(false);
+    };
+    loadProfiles();
+  },[]);
+
   const empNombre = userData.empresa||userData.nombre||"";
   const misObrasEmpresa = esEmpresa
     ? obras.filter(o=>o.esMia===true)
@@ -3026,13 +3215,24 @@ const MainApp = ({userRol,userData:init0,obras:initObras,setObrasRoot,onLogout,e
     });
   };
   // Filtrar bloqueados del swipe
-  const profesionalesFiltrados = profesionales.filter(p=>{
+  // Combinar perfiles reales de DB con demos — reales primero
+  const todosLosProfesionales = [
+    ...dbProfiles.filter(p=>p.rol==="profesional"),
+    ...profesionales.filter(p=>!dbProfiles.find(db=>db.id===p.id))
+  ].filter(p=>{
     if(bloqueados.includes(p.id)) return false;
     if(filtros.sector && !p.skills?.some(s=>s.toLowerCase().includes(filtros.sector.toLowerCase()))) return false;
     if(filtros.disponible && !p.disponible) return false;
     return true;
   });
-  const items = vista==="profesional"?profesionalesFiltrados:obras;
+
+  const todasLasEmpresas = [
+    ...dbProfiles.filter(p=>p.rol==="empresa"),
+    ...obras,
+  ];
+
+  const profesionalesFiltrados = todosLosProfesionales;
+  const items = vista==="profesional"?profesionalesFiltrados:todasLasEmpresas;
   const remaining = items.slice(idx);
   const toast_ = (msg,color) => {
     setToast({msg,color:color||"#2A9D8F"});
@@ -4435,7 +4635,12 @@ export default function Safy() {
   );
 
   if(phase==="onboarding") return (
-    <Onboarding googleData={null} onComplete={(rol,data)=>{
+    <Onboarding googleData={authData ? {
+      nombre: authData.user?.user_metadata?.full_name?.split(" ")[0] || authData.user?.user_metadata?.name?.split(" ")[0] || "",
+      apellido: authData.user?.user_metadata?.full_name?.split(" ").slice(1).join(" ") || "",
+      email: authData.email || "",
+      foto: authData.user?.user_metadata?.avatar_url || "",
+    } : null} onComplete={(rol,data)=>{
       setUserRol(rol);
       setPrimerLogin(true);
       setUserData({...data, email: authData?.email||data.email});
@@ -4473,6 +4678,8 @@ export default function Safy() {
           tarifa: data.tarifa ? Number(data.tarifa) : null,
           moneda: data.moneda || "ARS", skills: data.skills || [],
           perfil: data.descripcion || null, disponible: true,
+          lat: data.lat || null, lng: data.lng || null,
+          radio: Number(data.radio) || 30,
         }).catch(()=>{});
       }
       setPhase("app");
@@ -4480,7 +4687,7 @@ export default function Safy() {
   );
 
   return (
-    <MainApp userRol={userRol} userData={userData} obras={obras} setObrasRoot={setObras}
+    <MainApp userRol={userRol} userData={userData} authData={authData} obras={obras} setObrasRoot={setObras}
       esPrimerLogin={primerLogin}
       onLogout={()=>{
         supa.clearSession();
