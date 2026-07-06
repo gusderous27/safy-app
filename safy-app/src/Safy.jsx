@@ -810,96 +810,167 @@ const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => (
 
 // ─── TOUR DE BIENVENIDA ───────────────────────────────────────────────────────
 
-const TOUR_PASOS_PRO = [
+// ─── TOUR CONTEXTUAL ─────────────────────────────────────────────────────────
+
+const TOUR_PRO = [
   {
-    icon:"🔍",
-    titulo:"Descubrí oportunidades",
-    desc:"Deslizá perfiles de empresas y obras que buscan profesionales SyH/MA. Derecha para interesarte, izquierda para pasar.",
-    color:"#1a1a2e",
+    tab: "swipe",
+    titulo: "Descubrí empresas",
+    desc: "Deslizá las tarjetas hacia la derecha si te interesa una empresa, o hacia la izquierda para pasar. Cuando hay interés mutuo, ¡es un match!",
+    highlight: "swipe",
+    icono: "🔍",
   },
   {
-    icon:"🏗️",
-    titulo:"Oportunidades laborales",
-    desc:"Explorá todas las búsquedas activas de empresas. Postulate con un toque y esperá que te contacten.",
-    color:"#2A9D8F",
+    tab: "feed",
+    titulo: "Oportunidades laborales",
+    desc: "Acá aparecen todas las búsquedas activas. Podés postularte con un toque y la empresa recibirá tu perfil directamente.",
+    highlight: "feed",
+    icono: "🏗️",
   },
   {
-    icon:"🤝",
-    titulo:"Tus conexiones",
-    desc:"Cuando hay match mutuo, accedés al contacto directo de la empresa. Sin intermediarios.",
-    color:"#F4A261",
+    tab: "matches",
+    titulo: "Tus conexiones",
+    desc: "Cuando vos y una empresa se eligen mutuamente, aparece acá con el contacto directo. Sin intermediarios.",
+    highlight: "matches",
+    icono: "🤝",
   },
   {
-    icon:"👤",
-    titulo:"Tu perfil público",
-    desc:"Las empresas ven tu perfil antes de hacer match. Completalo bien para destacarte.",
-    color:"#7B2D8B",
+    tab: "perfil",
+    titulo: "Tu perfil público",
+    desc: "Las empresas ven esto antes de hacer match. Completá tu foto, descripción y skills para destacarte entre los demás.",
+    highlight: "perfil",
+    icono: "👤",
   },
 ];
 
-const TOUR_PASOS_EMP = [
+const TOUR_EMP = [
   {
-    icon:"📋",
-    titulo:"Publicá búsquedas",
-    desc:"Creá avisos para tus obras y proyectos. Los profesionales los ven y pueden postularse.",
-    color:"#1a1a2e",
+    tab: "mis_busquedas",
+    titulo: "Publicá búsquedas",
+    desc: "Tocá el botón \"+\" para publicar tu primera búsqueda. Los profesionales la verán y podrán postularse o hacer match con vos.",
+    highlight: "mis_busquedas",
+    icono: "📋",
   },
   {
-    icon:"🔍",
-    titulo:"Descubrí profesionales",
-    desc:"Explorá perfiles de profesionales SyH/MA disponibles. Deslizá para conectar con los que te interesan.",
-    color:"#2A9D8F",
+    tab: "swipe",
+    titulo: "Descubrí profesionales",
+    desc: "Explorá perfiles de profesionales SyH/MA disponibles. Deslizá a la derecha para mostrar interés.",
+    highlight: "swipe",
+    icono: "🔍",
   },
   {
-    icon:"🤝",
-    titulo:"Conexiones directas",
-    desc:"Cuando hay match mutuo, te enviamos el contacto directo del profesional para coordinar.",
-    color:"#F4A261",
+    tab: "matches",
+    titulo: "Conexiones directas",
+    desc: "Cuando hay match mutuo, encontrás acá el contacto directo del profesional para coordinar sin intermediarios.",
+    highlight: "matches",
+    icono: "🤝",
+  },
+  {
+    tab: "perfil",
+    titulo: "Perfil de tu empresa",
+    desc: "Los profesionales ven el perfil de tu empresa. Completá los datos para generar más confianza.",
+    highlight: "perfil",
+    icono: "🏢",
   },
 ];
 
-const TourBienvenida = ({rol, onFin}) => {
+const TourContextual = ({rol, tabActual, setTab, onFin}) => {
   const [paso, setPaso] = useState(0);
-  const pasos = rol === "empresa" ? TOUR_PASOS_EMP : TOUR_PASOS_PRO;
-  const esUltimo = paso === pasos.length - 1;
+  const pasos = rol === "empresa" ? TOUR_EMP : TOUR_PRO;
   const p = pasos[paso];
+  const esUltimo = paso === pasos.length - 1;
+
+  // Navegar al tab del paso actual
+  useEffect(()=>{
+    if(p && p.tab) setTab(p.tab);
+  },[paso]);
+
+  const siguiente = () => {
+    if(esUltimo) { onFin(); }
+    else { setPaso(s=>s+1); }
+  };
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(26,26,46,0.96)",zIndex:2000,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:28,maxWidth:420,margin:"0 auto"}}>
-      {/* Indicadores */}
-      <div style={{display:"flex",gap:6,marginBottom:40}}>
-        {pasos.map((_,i)=>(
-          <div key={i} style={{width:i===paso?24:6,height:6,borderRadius:99,background:i===paso?"#F4A261":"rgba(255,255,255,0.2)",transition:"all 0.3s ease"}}/>
-        ))}
-      </div>
+    <>
+      {/* Overlay semitransparente suave — no bloquea todo */}
+      <div style={{
+        position:"fixed",inset:0,background:"rgba(26,26,46,0.55)",
+        zIndex:500,pointerEvents:"none",
+        maxWidth:420,margin:"0 auto",
+      }}/>
 
-      {/* Contenido */}
-      <div style={{textAlign:"center",flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-        <div style={{width:100,height:100,borderRadius:28,background:p.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:48,marginBottom:28,boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}>
-          {p.icon}
+      {/* Tooltip flotante abajo */}
+      <div style={{
+        position:"fixed",bottom:90,left:"50%",transform:"translateX(-50%)",
+        width:"calc(100% - 32px)",maxWidth:388,
+        background:"#fff",borderRadius:20,
+        boxShadow:"0 8px 40px rgba(26,26,46,0.25)",
+        zIndex:600,padding:"20px 20px 16px",
+        animation:"fadeUp 0.3s ease",
+      }}>
+        {/* Header del tooltip */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{
+              width:36,height:36,borderRadius:12,
+              background:"#1a1a2e",display:"flex",alignItems:"center",
+              justifyContent:"center",fontSize:18,flexShrink:0,
+            }}>{p.icono}</div>
+            <div>
+              <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,marginBottom:2}}>
+                Paso {paso+1} de {pasos.length}
+              </div>
+              <div style={{fontWeight:800,fontSize:15,color:"#1a1a2e",lineHeight:1.2}}>
+                {p.titulo}
+              </div>
+            </div>
+          </div>
+          {/* X para saltar */}
+          <button onClick={onFin} style={{
+            background:"none",border:"none",color:"#ccc",fontSize:18,
+            cursor:"pointer",padding:"0 0 4px 8px",lineHeight:1,fontFamily:"inherit",
+            flexShrink:0,
+          }}>×</button>
         </div>
-        <div style={{fontWeight:800,fontSize:24,color:"#fff",marginBottom:12,letterSpacing:-.5}}>
-          {p.titulo}
-        </div>
-        <div style={{fontSize:15,color:"#8899bb",lineHeight:1.65,maxWidth:300,textAlign:"center"}}>
-          {p.desc}
-        </div>
-      </div>
 
-      {/* Botones */}
-      <div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
-        <button onClick={()=>esUltimo?onFin():setPaso(s=>s+1)}
-          style={{width:"100%",padding:"16px",borderRadius:16,border:"none",background:"#F4A261",color:"#1a1a2e",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"inherit"}}>
-          {esUltimo?"¡Empezar! →":"Siguiente →"}
-        </button>
-        {!esUltimo&&(
-          <button onClick={onFin}
-            style={{width:"100%",padding:"12px",borderRadius:16,border:"none",background:"transparent",color:"rgba(255,255,255,0.3)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+        {/* Descripción */}
+        <p style={{
+          fontSize:13,color:"#555",lineHeight:1.6,
+          margin:"0 0 16px",
+        }}>{p.desc}</p>
+
+        {/* Barra de progreso */}
+        <div style={{display:"flex",gap:4,marginBottom:14}}>
+          {pasos.map((_,i)=>(
+            <div key={i} style={{
+              flex:1,height:3,borderRadius:99,
+              background:i<=paso?"#F4A261":"#e0e0ef",
+              transition:"background 0.3s",
+            }}/>
+          ))}
+        </div>
+
+        {/* Botones */}
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={onFin} style={{
+            padding:"10px 16px",borderRadius:12,
+            border:"1.5px solid #e0e0ef",background:"#fff",
+            color:"#aaa",fontSize:12,fontWeight:600,cursor:"pointer",
+            fontFamily:"inherit",
+          }}>
             Saltar tour
           </button>
-        )}
+          <button onClick={siguiente} style={{
+            flex:1,padding:"10px",borderRadius:12,
+            border:"none",background:"#1a1a2e",
+            color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",
+            fontFamily:"inherit",
+          }}>
+            {esUltimo?"¡Listo! →":"Siguiente →"}
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -3119,7 +3190,7 @@ const MainApp = ({userRol,userData:init0,obras:initObras,setObrasRoot,onLogout,e
     <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#f0f0f8",
       minHeight:"100vh",display:"flex",flexDirection:"column",maxWidth:420,margin:"0 auto",position:"relative"}}>
       <style>{CSS}</style>
-      {showTour&&<TourBienvenida rol={userRol} onFin={()=>{setShowTour(false);try{localStorage.setItem("safy_tour_done","1");}catch(e){}}}/>}
+      {showTour&&<TourContextual rol={userRol} tabActual={tab} setTab={setTab} onFin={()=>{setShowTour(false);try{localStorage.setItem("safy_tour_done","1");}catch(e){}}}/>}
       {editando&&<EditarCuenta userData={userData} userRol={userRol}
         onSave={d=>{setUserData(d);setEditando(false);toast_("Perfil actualizado");}}
         onClose={()=>setEditando(false)}
@@ -4212,12 +4283,42 @@ export default function Safy() {
   // Detectar retorno de Google OAuth o sesión guardada
   useEffect(()=>{
     const checkOAuth = async () => {
-      // Solo procesar si hay token en la URL (retorno de Google OAuth)
-      // NO cargar sesión guardada automáticamente — el usuario debe hacer login explícito
       const hash = window.location.hash;
       const hasToken = hash && hash.includes("access_token");
-      if(!hasToken) return;
+      if(!hasToken) {
+        // Verificar si hay sesión guardada en localStorage
+        try {
+          const stored = localStorage.getItem("safy_session");
+          if(stored) {
+            const session = JSON.parse(stored);
+            if(session.token && session.user) {
+              setAuthData(session);
+              setPhase("loading");
+              try {
+                const profile = await supa.getProfile(session.token, session.user.id);
+                if(profile && profile.rol) {
+                  setUserRol(profile.rol);
+                  setUserData(profile);
+                  setPhase("app");
+                } else {
+                  // Sesión guardada pero sin perfil — limpiar y pedir onboarding
+                  supa.clearSession();
+                  setPhase("onboarding");
+                }
+              } catch(e) {
+                // Error de red o sesión expirada — limpiar todo
+                supa.clearSession();
+                setPhase("welcome");
+              }
+            }
+          }
+        } catch(e) {
+          supa.clearSession();
+        }
+        return;
+      }
 
+      // Procesar retorno de Google OAuth
       const session = await supa.getSessionFromURL();
       if(!session) return;
 
@@ -4234,10 +4335,11 @@ export default function Safy() {
           setPhase("app");
         } else {
           // Usuario nuevo — ir al onboarding
+          supa.clearSession(); // Limpiar hasta que complete el onboarding
           setPhase("onboarding");
         }
       } catch(e) {
-        // Error de red — ir al onboarding igual
+        supa.clearSession();
         setPhase("onboarding");
       }
     };
@@ -4321,8 +4423,10 @@ export default function Safy() {
   if(phase==="onboarding") return (
     <Onboarding googleData={null} onComplete={(rol,data)=>{
       setUserRol(rol);
-      setPrimerLogin(true); // Activa el tour
+      setPrimerLogin(true);
       setUserData({...data, email: authData?.email||data.email});
+      // Guardar sesión recién ahora que completó el onboarding
+      if(authData) supa.saveSession(authData);
       if(rol==="empresa") {
         const empNombre = data.empresa || data.contacto || "Mi Empresa";
         const empInit = empNombre.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
