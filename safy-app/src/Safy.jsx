@@ -82,8 +82,15 @@ const supa = {
     const r = await fetch(SUPA_URL + "/rest/v1/profiles?id=eq." + userId + "&select=*", {
       headers: { ...this.headers, "Authorization": "Bearer " + token }
     });
+    // Token inválido o expirado — limpiar sesión
+    if(r.status === 401 || r.status === 403) {
+      this.clearSession();
+      return null;
+    }
     const d = await r.json();
-    return Array.isArray(d) ? d[0] : null;
+    // Si devuelve error de Supabase (usuario eliminado, etc)
+    if(d && d.code) { this.clearSession(); return null; }
+    return Array.isArray(d) ? (d[0] || null) : null;
   },
 
   async getJobs(token) {
@@ -4301,13 +4308,15 @@ export default function Safy() {
                   setUserData(profile);
                   setPhase("app");
                 } else {
-                  // Sesión guardada pero sin perfil — limpiar y pedir onboarding
+                  // Sesión guardada pero sin perfil — cuenta eliminada o incompleta
+                  // Limpiar todo y mandar al welcome (no al onboarding, porque no tenemos authData válido)
                   supa.clearSession();
-                  setPhase("onboarding");
+                  setAuthData(null);
+                  setPhase("welcome");
                 }
               } catch(e) {
-                // Error de red o sesión expirada — limpiar todo
                 supa.clearSession();
+                setAuthData(null);
                 setPhase("welcome");
               }
             }
