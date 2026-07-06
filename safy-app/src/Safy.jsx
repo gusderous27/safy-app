@@ -711,11 +711,11 @@ const SafyLogo = ({size=72}) => null;
 const SplashScreen = ({onDone}) => {
   const [anim,setAnim] = useState("s");
   useEffect(()=>{
-    const t1=setTimeout(()=>setAnim("af"),700);
-    const t2=setTimeout(()=>setAnim("y"),1300);
-    const t3=setTimeout(()=>setAnim("tag"),1900);
-    const t4=setTimeout(()=>setAnim("out"),2700);
-    const t5=setTimeout(()=>onDone(),3400);
+    const t1=setTimeout(()=>setAnim("af"),600);
+    const t2=setTimeout(()=>setAnim("y"),1100);
+    const t3=setTimeout(()=>setAnim("tag"),1500);
+    const t4=setTimeout(()=>setAnim("out"),2000);
+    const t5=setTimeout(()=>onDone(),2600);
     return ()=>[t1,t2,t3,t4,t5].forEach(clearTimeout);
   },[]);
   const fading = anim==="out";
@@ -755,18 +755,12 @@ const SplashScreen = ({onDone}) => {
           </span>
         )}
       </div>
-      {(anim==="tag"||anim==="out")&&(
-        <div style={{fontSize:13,color:"#7788aa",textAlign:"center",lineHeight:1.5,marginTop:16,
-          animation:"fadeInTag 0.4s ease forwards"}}>
-          El match inteligente para profesionales<br/>de Seguridad, Higiene y Medio Ambiente
-        </div>
-      )}
       <div style={{position:"absolute",bottom:52,display:"flex",gap:8,
-        opacity:(anim==="tag"||anim==="out")?1:0,transition:"opacity 0.5s ease"}}>
+        opacity:(anim==="af"||anim==="y"||anim==="tag"||anim==="out")?1:0,transition:"opacity 0.5s ease"}}>
         {[0,1,2].map(i=>(
           <div key={i} style={{width:i===1?8:5,height:i===1?8:5,borderRadius:"50%",
             background:i===1?"#F4A261":"rgba(255,255,255,0.3)",
-            animation:(anim==="tag"||anim==="out")?"dotPulse 1.4s ease "+(i*0.22)+"s infinite":"none"}}/>
+            animation:(anim==="af"||anim==="y"||anim==="tag"||anim==="out")?"dotPulse 1.4s ease "+(i*0.22)+"s infinite":"none"}}/>
         ))}
       </div>
     </div>
@@ -820,6 +814,101 @@ const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => (
   </div>
 );
 
+
+// ─── TOUR DE BIENVENIDA ───────────────────────────────────────────────────────
+
+const TOUR_PASOS_PRO = [
+  {
+    icon:"🔍",
+    titulo:"Descubrí oportunidades",
+    desc:"Deslizá perfiles de empresas y obras que buscan profesionales SyH/MA. Derecha para interesarte, izquierda para pasar.",
+    color:"#1a1a2e",
+  },
+  {
+    icon:"🏗️",
+    titulo:"Oportunidades laborales",
+    desc:"Explorá todas las búsquedas activas de empresas. Postulate con un toque y esperá que te contacten.",
+    color:"#2A9D8F",
+  },
+  {
+    icon:"🤝",
+    titulo:"Tus conexiones",
+    desc:"Cuando hay match mutuo, accedés al contacto directo de la empresa. Sin intermediarios.",
+    color:"#F4A261",
+  },
+  {
+    icon:"👤",
+    titulo:"Tu perfil público",
+    desc:"Las empresas ven tu perfil antes de hacer match. Completalo bien para destacarte.",
+    color:"#7B2D8B",
+  },
+];
+
+const TOUR_PASOS_EMP = [
+  {
+    icon:"📋",
+    titulo:"Publicá búsquedas",
+    desc:"Creá avisos para tus obras y proyectos. Los profesionales los ven y pueden postularse.",
+    color:"#1a1a2e",
+  },
+  {
+    icon:"🔍",
+    titulo:"Descubrí profesionales",
+    desc:"Explorá perfiles de profesionales SyH/MA disponibles. Deslizá para conectar con los que te interesan.",
+    color:"#2A9D8F",
+  },
+  {
+    icon:"🤝",
+    titulo:"Conexiones directas",
+    desc:"Cuando hay match mutuo, te enviamos el contacto directo del profesional para coordinar.",
+    color:"#F4A261",
+  },
+];
+
+const TourBienvenida = ({rol, onFin}) => {
+  const [paso, setPaso] = useState(0);
+  const pasos = rol === "empresa" ? TOUR_PASOS_EMP : TOUR_PASOS_PRO;
+  const esUltimo = paso === pasos.length - 1;
+  const p = pasos[paso];
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(26,26,46,0.96)",zIndex:2000,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:28,maxWidth:420,margin:"0 auto"}}>
+      {/* Indicadores */}
+      <div style={{display:"flex",gap:6,marginBottom:40}}>
+        {pasos.map((_,i)=>(
+          <div key={i} style={{width:i===paso?24:6,height:6,borderRadius:99,background:i===paso?"#F4A261":"rgba(255,255,255,0.2)",transition:"all 0.3s ease"}}/>
+        ))}
+      </div>
+
+      {/* Contenido */}
+      <div style={{textAlign:"center",flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+        <div style={{width:100,height:100,borderRadius:28,background:p.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:48,marginBottom:28,boxShadow:"0 8px 32px rgba(0,0,0,0.3)"}}>
+          {p.icon}
+        </div>
+        <div style={{fontWeight:800,fontSize:24,color:"#fff",marginBottom:12,letterSpacing:-.5}}>
+          {p.titulo}
+        </div>
+        <div style={{fontSize:15,color:"#8899bb",lineHeight:1.65,maxWidth:300,textAlign:"center"}}>
+          {p.desc}
+        </div>
+      </div>
+
+      {/* Botones */}
+      <div style={{width:"100%",display:"flex",flexDirection:"column",gap:10}}>
+        <button onClick={()=>esUltimo?onFin():setPaso(s=>s+1)}
+          style={{width:"100%",padding:"16px",borderRadius:16,border:"none",background:"#F4A261",color:"#1a1a2e",fontWeight:800,fontSize:16,cursor:"pointer",fontFamily:"inherit"}}>
+          {esUltimo?"¡Empezar! →":"Siguiente →"}
+        </button>
+        {!esUltimo&&(
+          <button onClick={onFin}
+            style={{width:"100%",padding:"12px",borderRadius:16,border:"none",background:"transparent",color:"rgba(255,255,255,0.3)",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+            Saltar tour
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 
@@ -2808,7 +2897,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 
-const MainApp = ({userRol,userData:init0,obras:initObras,setObrasRoot,onLogout}) => {
+const MainApp = ({userRol,userData:init0,obras:initObras,setObrasRoot,onLogout,esPrimerLogin=false}) => {
   const esEmpresa = userRol==="empresa";
   const [tab,setTab]                   = useState(esEmpresa?"mis_busquedas":"swipe");
   const [vista,setVista]               = useState("profesional");
@@ -2826,7 +2915,7 @@ const MainApp = ({userRol,userData:init0,obras:initObras,setObrasRoot,onLogout})
   const [misBusquedas,setMisBusquedas] = useState([]);
   const [showNueva,setShowNueva]       = useState(false);
   const [postViendo,setPostViendo]     = useState(null);
-  // obras y setObras vienen de Root — estado compartido
+  const [showTour,setShowTour]         = useState(esPrimerLogin);
   // Profesional no necesita obras de Root — empresa sí
   const [obrasLocales, setObrasLocales] = useState(esEmpresa ? (initObras||[]) : (initObras||[]));
   const obras = obrasLocales;
@@ -3037,6 +3126,7 @@ const MainApp = ({userRol,userData:init0,obras:initObras,setObrasRoot,onLogout})
     <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#f0f0f8",
       minHeight:"100vh",display:"flex",flexDirection:"column",maxWidth:420,margin:"0 auto",position:"relative"}}>
       <style>{CSS}</style>
+      {showTour&&<TourBienvenida rol={userRol} onFin={()=>{setShowTour(false);try{localStorage.setItem("safy_tour_done","1");}catch(e){}}}/>}
       {editando&&<EditarCuenta userData={userData} userRol={userRol}
         onSave={d=>{setUserData(d);setEditando(false);toast_("Perfil actualizado");}}
         onClose={()=>setEditando(false)}
@@ -4119,6 +4209,7 @@ export default function Safy() {
   const [adminOpen,setAdminOpen] = useState(false);
   const [adminInput,setAdminInput] = useState("");
   const [adminErr,setAdminErr] = useState(false);
+  const [primerLogin,setPrimerLogin] = useState(false);
 
   const tryAdmin = () => {
     if(adminInput===ADMIN_CODE){ setAdminOpen(true); setAdminInput(""); setAdminErr(false); }
@@ -4225,6 +4316,7 @@ export default function Safy() {
   if(phase==="onboarding") return (
     <Onboarding googleData={null} onComplete={(rol,data)=>{
       setUserRol(rol);
+      setPrimerLogin(true);
       setUserData({...data, email: authData?.email||data.email});
       if(rol==="empresa") {
         const empNombre = data.empresa || data.contacto || "Mi Empresa";
@@ -4266,6 +4358,7 @@ export default function Safy() {
 
   return (
     <MainApp userRol={userRol} userData={userData} obras={obras} setObrasRoot={setObras}
+      esPrimerLogin={primerLogin}
       onLogout={()=>{
         supa.clearSession();
         setPhase("welcome");
@@ -4273,6 +4366,7 @@ export default function Safy() {
         setUserData({});
         setAuthData(null);
         setObras(OBRAS_SEED);
+        setPrimerLogin(false);
       }}/>
   );
 }
