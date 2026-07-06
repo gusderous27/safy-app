@@ -853,30 +853,26 @@ const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => (
 const TOUR_PRO = [
   {
     tab: "swipe",
-    titulo: "Descubrí empresas",
-    desc: "Deslizá las tarjetas hacia la derecha si te interesa una empresa, o hacia la izquierda para pasar. Cuando hay interés mutuo, ¡es un match!",
-    highlight: "swipe",
+    titulo: "Descubrí ofertas de trabajo",
+    desc: "Deslizá las tarjetas hacia la derecha si te interesa una oferta o empresa. Si la empresa también te elige, ¡es un match! Izquierda para pasar.",
     icono: "🔍",
   },
   {
     tab: "feed",
     titulo: "Oportunidades laborales",
-    desc: "Acá aparecen todas las búsquedas activas. Podés postularte con un toque y la empresa recibirá tu perfil directamente.",
-    highlight: "feed",
+    desc: "Acá aparecen todas las búsquedas activas. Al postularte, la empresa evaluará tu perfil. Si les interesás, te contactarán directamente.",
     icono: "🏗️",
   },
   {
     tab: "matches",
-    titulo: "Tus conexiones",
-    desc: "Cuando vos y una empresa se eligen mutuamente, aparece acá con el contacto directo. Sin intermediarios.",
-    highlight: "matches",
+    titulo: "Tus conexiones con empresas",
+    desc: "Cuando vos y una empresa se eligen mutuamente, aparece acá con su contacto directo. Sin intermediarios — hablás directo con quien toma decisiones.",
     icono: "🤝",
   },
   {
     tab: "perfil",
     titulo: "Tu perfil público",
-    desc: "Las empresas ven esto antes de hacer match. Completá tu foto, descripción y skills para destacarte entre los demás.",
-    highlight: "perfil",
+    desc: "Las empresas ven esto antes de hacer match. Completá tu foto, descripción y skills para destacarte entre los demás profesionales.",
     icono: "👤",
   },
 ];
@@ -885,29 +881,25 @@ const TOUR_EMP = [
   {
     tab: "mis_busquedas",
     titulo: "Publicá búsquedas",
-    desc: "Tocá el botón \"+\" para publicar tu primera búsqueda. Los profesionales la verán y podrán postularse o hacer match con vos.",
-    highlight: "mis_busquedas",
+    desc: "Tocá el botón \"+\" para publicar tu primera búsqueda. Los profesionales la verán y podrán postularse. Vos decidís a quién contactar.",
     icono: "📋",
   },
   {
     tab: "swipe",
     titulo: "Descubrí profesionales",
-    desc: "Explorá perfiles de profesionales SyH/MA disponibles. Deslizá a la derecha para mostrar interés.",
-    highlight: "swipe",
+    desc: "Explorá perfiles de profesionales SyH/MA disponibles cerca tuyo. Deslizá a la derecha para mostrar interés. Si el profesional también te elige, ¡es un match!",
     icono: "🔍",
   },
   {
     tab: "matches",
-    titulo: "Conexiones directas",
-    desc: "Cuando hay match mutuo, encontrás acá el contacto directo del profesional para coordinar sin intermediarios.",
-    highlight: "matches",
+    titulo: "Tus conexiones con profesionales",
+    desc: "Cuando vos y un profesional se eligen mutuamente, aparece acá con su contacto directo — email y teléfono — para coordinar sin intermediarios.",
     icono: "🤝",
   },
   {
     tab: "perfil",
     titulo: "Perfil de tu empresa",
-    desc: "Los profesionales ven el perfil de tu empresa. Completá los datos para generar más confianza.",
-    highlight: "perfil",
+    desc: "Los profesionales ven el perfil de tu empresa antes de hacer match. Completá los datos para generar confianza y atraer los mejores candidatos.",
     icono: "🏢",
   },
 ];
@@ -2503,57 +2495,40 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
 // ─── VALORACIÓN ───────────────────────────────────────────────────────────────
 
 const ModalValoracion = ({match,onSubmit,onClose}) => {
-  const [stars,setStars] = useState(0);
   const [hover,setHover] = useState(0);
-  const [comentario,setComentario] = useState("");
-  const ok = stars>0;
   const labels = ["","Muy mala","Mala","Regular","Buena","Excelente"];
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(26,26,46,.88)",zIndex:900,
-      display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div style={{background:"#fff",borderRadius:"24px 24px 0 0",padding:"28px 24px 40px",
-        width:"100%",maxWidth:420,animation:"slideUp .25s ease"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <div style={{fontWeight:800,fontSize:18,color:"#1a1a2e"}}>Valorar experiencia</div>
-          <button onClick={onClose}
-            style={{background:"none",border:"none",fontSize:22,color:"#aaa",cursor:"pointer",fontFamily:"inherit"}}>
-            x
-          </button>
+      display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+      onClick={onClose}>
+      <div style={{background:"#fff",borderRadius:"24px 24px 0 0",padding:"28px 24px 36px",
+        width:"100%",maxWidth:420,animation:"slideUp .25s ease"}}
+        onClick={e=>e.stopPropagation()}>
+        <div style={{textAlign:"center",marginBottom:6}}>
+          <div style={{fontWeight:800,fontSize:18,color:"#1a1a2e",marginBottom:4}}>
+            ¿Cómo fue tu experiencia?
+          </div>
+          <div style={{fontSize:13,color:"#888"}}>
+            {match.empresa||match.nombre}
+          </div>
         </div>
-        <div style={{fontSize:13,color:"#888",marginBottom:20}}>
-          Como fue tu experiencia con {match.empresa||match.nombre}?
-        </div>
-        <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:16}}>
+        <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:24,marginBottom:12}}>
           {[1,2,3,4,5].map(n=>(
             <button key={n}
-              onMouseEnter={()=>setHover(n)} onMouseLeave={()=>setHover(0)}
-              onClick={()=>setStars(n)}
-              style={{background:"none",border:"none",fontSize:40,cursor:"pointer",
-                color:(hover||stars)>=n?"#F4A261":"#e0e0ef",fontFamily:"inherit",
-                transform:(hover||stars)>=n?"scale(1.15)":"scale(1)",transition:"transform .1s, color .15s"}}>
+              onMouseEnter={()=>setHover(n)}
+              onMouseLeave={()=>setHover(0)}
+              onClick={()=>{ onSubmit({stars:n}); onClose(); }}
+              style={{background:"none",border:"none",fontSize:44,cursor:"pointer",
+                color:hover>=n?"#F4A261":"#e0e0ef",fontFamily:"inherit",
+                transform:hover>=n?"scale(1.2)":"scale(1)",
+                transition:"transform .1s, color .15s",lineHeight:1}}>
               ★
             </button>
           ))}
         </div>
-        <div style={{textAlign:"center",fontSize:14,fontWeight:700,color:"#1a1a2e",marginBottom:20,minHeight:20}}>
-          {labels[hover||stars]||""}
+        <div style={{textAlign:"center",fontSize:14,fontWeight:700,color:"#F4A261",minHeight:22}}>
+          {labels[hover]||"Tocá para valorar"}
         </div>
-        <div style={{marginBottom:20}}>
-          <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
-            Comentario <span style={{color:"#aaa",fontWeight:400}}>Opcional</span>
-          </label>
-          <textarea rows={3} value={comentario} onChange={e=>setComentario(e.target.value)}
-            placeholder="Contá tu experiencia..."
-            style={{width:"100%",padding:"12px 14px",borderRadius:12,border:"1.5px solid #e0e0ef",
-              fontSize:14,color:"#1a1a2e",outline:"none",resize:"none",
-              boxSizing:"border-box",lineHeight:1.5,fontFamily:"inherit"}}/>
-        </div>
-        <button onClick={()=>{if(ok){onSubmit({stars,comentario});onClose();}}} disabled={!ok}
-          style={{width:"100%",padding:14,borderRadius:14,border:"none",
-            background:ok?"#1a1a2e":"#ccc",color:"#fff",fontWeight:800,fontSize:15,
-            cursor:ok?"pointer":"not-allowed",fontFamily:"inherit"}}>
-          Enviar valoración
-        </button>
       </div>
     </div>
   );
@@ -3425,6 +3400,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         onClose={()=>setValorando(null)}/>}
       {reportando&&<ModalReporte
         persona={reportando}
+        userData={userData}
         onReportar={r=>setReportes(p=>[...p,r])}
         onBloquear={p=>{setBloqueados(b=>[...b,p.id]);setMatches(m=>m.filter(x=>x.id!==p.id));toast_("Usuario bloqueado");}}
         onClose={()=>setReportando(null)}/>}
@@ -4144,7 +4120,51 @@ const MOTIVOS_REPORTE = [
   "Otro",
 ];
 
-const ModalReporte = ({persona, onReportar, onBloquear, onClose}) => {
+const RESEND_KEY = "re_QXyqybgJ_s6pw8gPxbxkoiGmd4em1d7a7";
+const REPORT_EMAIL = "derosegustavo27@gmail.com";
+
+const sendReporte = async ({persona, motivo, detalle, reportadoPor}) => {
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + RESEND_KEY,
+      },
+      body: JSON.stringify({
+        from: "Safy Reportes <onboarding@resend.dev>",
+        to: [REPORT_EMAIL],
+        subject: "🚨 Nuevo reporte en Safy — " + motivo,
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+            <h2 style="color:#E63946;margin-bottom:4px">🚨 Nuevo reporte en Safy</h2>
+            <hr style="border:none;border-top:1px solid #eee;margin:16px 0"/>
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 0;color:#888;font-size:13px;width:140px">Reportado</td>
+                  <td style="padding:8px 0;font-weight:700;font-size:14px">${persona.nombre||persona.empresa||"Desconocido"}</td></tr>
+              <tr><td style="padding:8px 0;color:#888;font-size:13px">Email reportado</td>
+                  <td style="padding:8px 0;font-size:14px">${persona.email||"—"}</td></tr>
+              <tr><td style="padding:8px 0;color:#888;font-size:13px">Motivo</td>
+                  <td style="padding:8px 0;font-weight:700;color:#E63946;font-size:14px">${motivo}</td></tr>
+              <tr><td style="padding:8px 0;color:#888;font-size:13px">Detalle</td>
+                  <td style="padding:8px 0;font-size:14px">${detalle||"Sin detalle adicional"}</td></tr>
+              <tr><td style="padding:8px 0;color:#888;font-size:13px">Reportado por</td>
+                  <td style="padding:8px 0;font-size:14px">${reportadoPor||"Anónimo"}</td></tr>
+              <tr><td style="padding:8px 0;color:#888;font-size:13px">Fecha</td>
+                  <td style="padding:8px 0;font-size:14px">${new Date().toLocaleString("es-AR")}</td></tr>
+            </table>
+            <hr style="border:none;border-top:1px solid #eee;margin:16px 0"/>
+            <p style="color:#aaa;font-size:11px">Safy — Sistema de reportes automáticos</p>
+          </div>
+        `,
+      }),
+    });
+  } catch(e) {
+    console.error("Error enviando reporte:", e);
+  }
+};
+
+const ModalReporte = ({persona, onReportar, onBloquear, onClose, userData}) => {
   const [motivo, setMotivo] = useState("");
   const [detalle, setDetalle] = useState("");
   const [paso, setPaso] = useState("menu"); // menu | reporte | confirmado
@@ -4207,7 +4227,11 @@ const ModalReporte = ({persona, onReportar, onBloquear, onClose}) => {
               cursor:"pointer",fontFamily:"inherit"}}>
             Cancelar
           </button>
-          <button onClick={()=>{onReportar({persona,motivo,detalle,fecha:new Date().toISOString()});setPaso("confirmado");}}
+          <button onClick={()=>{
+              onReportar({persona,motivo,detalle,fecha:new Date().toISOString()});
+              sendReporte({persona, motivo, detalle, reportadoPor: userData?.email||"Anónimo"});
+              setPaso("confirmado");
+            }}
             disabled={!motivo}
             style={{flex:2,padding:12,borderRadius:12,border:"none",
               background:motivo?"#E63946":"#ccc",color:"#fff",fontWeight:700,fontSize:13,
