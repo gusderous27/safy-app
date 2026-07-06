@@ -516,26 +516,23 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
 
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20}}>
-      <div style={{position:"relative",cursor:"pointer"}}>
-        <div onClick={()=>ref.current.click()}>
-          <Av init={init} color={color||"#1a1a2e"} size={size} foto={foto}/>
-        </div>
-        <div onClick={()=>ref.current.click()} style={{position:"absolute",bottom:0,right:0,width:28,height:28,borderRadius:"50%",
+      <label style={{position:"relative",cursor:"pointer",display:"inline-block"}}>
+        <Av init={init} color={color||"#1a1a2e"} size={size} foto={foto}/>
+        <div style={{position:"absolute",bottom:0,right:0,width:28,height:28,borderRadius:"50%",
           background:"#1a1a2e",border:"2px solid #fff",
-          display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,cursor:"pointer"}}>
+          display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>
           📷
         </div>
-      </div>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFile}
+          style={{display:"none"}}
+        />
+      </label>
       <div style={{fontSize:12,color:"#888",marginTop:8,textAlign:"center"}}>
         {foto?"Tocá para cambiar la foto":"Tocá para agregar foto de perfil"}
       </div>
-      <input
-        ref={ref}
-        type="file"
-        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/heic,image/heif,image/*"
-        onChange={handleFile}
-        style={{position:"absolute",opacity:0,width:1,height:1,overflow:"hidden",pointerEvents:"none"}}
-      />
     </div>
   );
 };
