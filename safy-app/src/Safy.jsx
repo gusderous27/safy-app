@@ -50,13 +50,6 @@ const supa = {
         } catch(e) {}
       }
     }
-    try {
-      const stored = localStorage.getItem("safy_session");
-      if (stored) {
-        const session = JSON.parse(stored);
-        if (session.token && session.user) return session;
-      }
-    } catch(e) {}
     return null;
   },
 
@@ -4219,21 +4212,33 @@ export default function Safy() {
   // Detectar retorno de Google OAuth o sesión guardada
   useEffect(()=>{
     const checkOAuth = async () => {
+      // Solo procesar si hay token en la URL (retorno de Google OAuth)
+      // NO cargar sesión guardada automáticamente — el usuario debe hacer login explícito
+      const hash = window.location.hash;
+      const hasToken = hash && hash.includes("access_token");
+      if(!hasToken) return;
+
       const session = await supa.getSessionFromURL();
-      if(session) {
-        supa.saveSession(session);
-        setAuthData(session);
-        setPhase("loading");
-        try {
-          const profile = await supa.getProfile(session.token, session.user.id);
-          if(profile && profile.rol) {
-            setUserRol(profile.rol);
-            setUserData(profile);
-            setPhase("app");
-          } else {
-            setPhase("onboarding");
-          }
-        } catch(e) { setPhase("onboarding"); }
+      if(!session) return;
+
+      supa.saveSession(session);
+      setAuthData(session);
+      setPhase("loading");
+
+      try {
+        const profile = await supa.getProfile(session.token, session.user.id);
+        if(profile && profile.rol) {
+          // Usuario existente — cargar perfil y ir a la app
+          setUserRol(profile.rol);
+          setUserData(profile);
+          setPhase("app");
+        } else {
+          // Usuario nuevo — ir al onboarding
+          setPhase("onboarding");
+        }
+      } catch(e) {
+        // Error de red — ir al onboarding igual
+        setPhase("onboarding");
       }
     };
     checkOAuth();
@@ -4316,7 +4321,7 @@ export default function Safy() {
   if(phase==="onboarding") return (
     <Onboarding googleData={null} onComplete={(rol,data)=>{
       setUserRol(rol);
-      setPrimerLogin(true);
+      setPrimerLogin(true); // Activa el tour
       setUserData({...data, email: authData?.email||data.email});
       if(rol==="empresa") {
         const empNombre = data.empresa || data.contacto || "Mi Empresa";
