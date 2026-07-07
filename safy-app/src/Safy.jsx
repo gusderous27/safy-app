@@ -174,7 +174,7 @@ const TERMINOS = {
   VE:{disciplina:"Seguridad y Salud en el Trabajo",abrev:"SST"},
   CL:{disciplina:"Seguridad y Salud Ocupacional",abrev:"SSO"},
   BR:{disciplina:"Segurança e Saúde Ocupacional",abrev:"SSO"},
-  US:{disciplina:"Occupational Health & Safety",abrev:"OHS"},
+  US:{disciplina:"Seguridad y Salud Ocupacional",abrev:"SSO"},
   default:{disciplina:"Seguridad y Salud en el Trabajo",abrev:"SST"},
 };
 const getT = (p) => TERMINOS[p] || TERMINOS.default;
@@ -1696,28 +1696,28 @@ const StepPro2 = ({data,set,onNext}) => {
   const pais = data.pais||"AR";
   const t = getT(pais);
   const opsSyH = [
-    {v:"",        l:"Seleccioná tu título en "+t.abrev+"..."},
-    {v:"no_aplica",l:"No aplica"},
-    {v:"est_syh", l:"Estudiante de "+t.disciplina},
-    {v:"tec_syh", l:"Técnico en "+t.disciplina},
-    {v:"lic_syh", l:"Licenciado en "+t.disciplina},
-    {v:"ing_syh", l:"Ingeniero en "+t.disciplina},
-    {v:"aud_syh", l:"Auditor en "+t.abrev},
+    {v:"",          l:"Seleccioná tu título..."},
+    {v:"no_aplica", l:"No aplica"},
+    {v:"est_syh",   l:"Estudiante en "+t.disciplina},
+    {v:"tec_syh",   l:"Técnico en "+t.disciplina},
+    {v:"aud_syh",   l:"Auditor en "+t.disciplina},
+    {v:"lic_syh",   l:"Licenciado en "+t.disciplina},
+    {v:"ing_syh",   l:"Ingeniero en "+t.disciplina},
     ...(pais==="US" ? [
       {v:"osha30_con", l:"OSHA 30 — Construcción"},
       {v:"osha30_ind", l:"OSHA 30 — Industria General"},
-      {v:"iso45001",   l:"Specialist ISO 45001"},
+      {v:"iso45001",   l:"Especialista ISO 45001"},
     ] : []),
   ];
   const opsMA = [
-    {v:"",         l:"Sin título en MA (opcional)"},
-    {v:"no_aplica",l:"No aplica"},
-    {v:"est_ma",   l:"Estudiante de Ciencias Ambientales"},
-    {v:"tec_ma",   l:"Técnico en Medio Ambiente"},
-    {v:"lic_ma",   l:"Licenciado en Ciencias Ambientales"},
-    {v:"ing_ma",   l:"Ingeniero Ambiental"},
-    {v:"gest_ma",  l:"Gestor Ambiental"},
-    {v:"aud_ma",   l:"Auditor Ambiental"},
+    {v:"",          l:"Sin título en Medio Ambiente (opcional)"},
+    {v:"no_aplica", l:"No aplica"},
+    {v:"est_ma",    l:"Estudiante en Ciencias Ambientales"},
+    {v:"tec_ma",    l:"Técnico en Medio Ambiente"},
+    {v:"aud_ma",    l:"Auditor Ambiental"},
+    {v:"gest_ma",   l:"Gestor Ambiental"},
+    {v:"lic_ma",    l:"Licenciado en Ciencias Ambientales"},
+    {v:"ing_ma",    l:"Ingeniero Ambiental"},
   ];
   const next = () => { set({...data,titulo:tit,tituloMA:titMA,experiencia:exp,descripcion:desc}); onNext(); };
   return (
