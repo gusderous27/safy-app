@@ -537,21 +537,17 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
 
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20}}>
-      <div style={{position:"relative",marginBottom:8}}>
+      <div style={{position:"relative",marginBottom:12}}>
         <Av init={init} color={color||"#1a1a2e"} size={size} foto={foto}/>
-        <div style={{position:"absolute",bottom:0,right:0,width:28,height:28,borderRadius:"50%",
-          background:"#1a1a2e",border:"2px solid #fff",
-          display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>
-          📷
-        </div>
       </div>
       <label style={{
-        display:"inline-block",padding:"7px 16px",borderRadius:99,
+        display:"inline-flex",alignItems:"center",gap:6,
+        padding:"8px 20px",borderRadius:99,
         background:"#f0f0f8",border:"1.5px solid #e0e0ef",
-        fontSize:12,fontWeight:600,color:"#1a1a2e",
+        fontSize:13,fontWeight:600,color:"#1a1a2e",
         cursor:"pointer",userSelect:"none",
       }}>
-        {foto ? "Cambiar foto" : "Subir foto"}
+        📷 {foto ? "Cambiar foto" : "Subir foto"}
         <input
           type="file"
           accept="image/*"
@@ -853,20 +849,20 @@ const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => (
 const TOUR_PRO = [
   {
     tab: "swipe",
-    titulo: "Descubrí ofertas de trabajo",
-    desc: "Deslizá las tarjetas hacia la derecha si te interesa una oferta o empresa. Si la empresa también te elige, ¡es un match! Izquierda para pasar.",
+    titulo: "Contactate con otros profesionales",
+    desc: "Deslizá las tarjetas hacia la derecha si te interesa conectar con ese profesional. Si la otra persona también te elige, ¡es un match! Izquierda para pasar.",
     icono: "🔍",
   },
   {
     tab: "feed",
     titulo: "Oportunidades laborales",
-    desc: "Acá aparecen todas las búsquedas activas. Al postularte, la empresa evaluará tu perfil. Si les interesás, te contactarán directamente.",
+    desc: "Acá aparecen todas las búsquedas activas de empresas. Al postularte, la empresa evaluará tu perfil. Si les interesás, te contactarán directamente.",
     icono: "🏗️",
   },
   {
     tab: "matches",
-    titulo: "Tus conexiones con empresas",
-    desc: "Cuando vos y una empresa se eligen mutuamente, aparece acá con su contacto directo. Sin intermediarios — hablás directo con quien toma decisiones.",
+    titulo: "Tus conexiones con profesionales",
+    desc: "Cuando vos y otro profesional se eligen mutuamente, aparece acá con su contacto directo. Sin intermediarios.",
     icono: "🤝",
   },
   {
@@ -3092,6 +3088,113 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 
+const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, setPostViendo, toast_}) => {
+  const feedItems = obras.filter(o=>!posts.includes(o.id)&&!feedSkips.includes(o.id));
+  const obraActual = feedItems[0] || null;
+  const totalVistas = posts.filter(id=>obras.some(o=>o.id===id)).length;
+  const [dragX,setDragX] = useState(0);
+  const [dragging,setDragging] = useState(false);
+  const [startX,setStartX] = useState(0);
+
+  const onStart = cx => { setDragging(true); setStartX(cx-dragX); };
+  const onMove  = cx => { if(!dragging) return; setDragX(cx-startX); };
+  const onEnd   = () => {
+    if(!dragging) return; setDragging(false);
+    if(dragX>80 && obraActual){ setPosts(p=>[...p,obraActual.id]); toast_("Postulación enviada a "+obraActual.empresa); setDragX(0); }
+    else if(dragX<-80 && obraActual){ setFeedSkips(p=>[...p,obraActual.id]); setDragX(0); }
+    else setDragX(0);
+  };
+
+  if(!obraActual) return (
+    <div style={{textAlign:"center",padding:"60px 20px",color:"#999"}}>
+      <div style={{fontSize:48,marginBottom:12}}>🎉</div>
+      <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>¡Revisaste todas las oportunidades!</div>
+      <div style={{fontSize:13,lineHeight:1.5}}>Volvé más tarde para ver nuevas búsquedas en tu zona.</div>
+    </div>
+  );
+
+  const sym = obraActual.moneda==="USD"?"U$D":"$";
+
+  return (
+    <div>
+      <div style={{fontSize:13,color:"#888",marginBottom:12,display:"flex",justifyContent:"space-between"}}>
+        <span>{feedItems.length} oportunidades restantes</span>
+        {totalVistas>0&&<span style={{color:"#2A9D8F",fontWeight:600}}>{totalVistas} enviadas ✓</span>}
+      </div>
+      {/* Indicadores direccionales */}
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,padding:"0 4px"}}>
+        <span style={{fontSize:12,color:dragX<-40?"#E63946":"transparent",fontWeight:700,transition:"color .15s"}}>← Pasar</span>
+        <span style={{fontSize:12,color:dragX>40?"#2A9D8F":"transparent",fontWeight:700,transition:"color .15s"}}>Postularme →</span>
+      </div>
+      {/* Card swipeable */}
+      <div
+        onMouseDown={e=>onStart(e.clientX)} onMouseMove={e=>onMove(e.clientX)} onMouseUp={onEnd} onMouseLeave={onEnd}
+        onTouchStart={e=>onStart(e.touches[0].clientX)} onTouchMove={e=>onMove(e.touches[0].clientX)} onTouchEnd={onEnd}
+        style={{
+          position:"relative",
+          transform:`rotate(${dragX*0.04}deg) translateX(${dragX}px)`,
+          transition:dragging?"none":"transform 0.3s ease",
+          cursor:"grab",userSelect:"none",
+          background:"#fff",borderRadius:16,
+          boxShadow:"0 2px 16px rgba(0,0,0,0.1)",
+          overflow:"hidden",
+        }}>
+        {dragX>40&&<div style={{position:"absolute",top:16,right:16,zIndex:10,background:"#2A9D8F",borderRadius:99,padding:"6px 14px",fontWeight:800,fontSize:13,color:"#fff"}}>POSTULARME ✓</div>}
+        {dragX<-40&&<div style={{position:"absolute",top:16,left:16,zIndex:10,background:"#E63946",borderRadius:99,padding:"6px 14px",fontWeight:800,fontSize:13,color:"#fff"}}>PASAR ✕</div>}
+        <div style={{height:5,background:obraActual.color||"#2A9D8F"}}/>
+        <div style={{padding:18}}>
+          <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:14}}>
+            <div style={{width:52,height:52,borderRadius:"50%",background:obraActual.color||"#2A9D8F",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:700,fontSize:18,flexShrink:0}}>
+              {(obraActual.avatar||(obraActual.empresa||"??").slice(0,2)).toUpperCase()}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div style={{fontWeight:800,fontSize:16,color:"#1a1a2e"}}>{obraActual.empresa}</div>
+                {obraActual.urgente&&<span style={{background:"#E63946",color:"#fff",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:99,flexShrink:0}}>URGENTE</span>}
+              </div>
+              <div style={{fontSize:12,color:"#888",marginTop:2}}>{obraActual.tipo} · {obraActual.ciudad}</div>
+            </div>
+          </div>
+          <p style={{fontSize:14,color:"#444",lineHeight:1.6,margin:"0 0 14px"}}>{obraActual.descripcion}</p>
+          {obraActual.requisitos?.length>0&&(
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+              {obraActual.requisitos.map((r,i)=>(
+                <span key={i} style={{background:"#f0f0f8",borderRadius:99,padding:"4px 12px",fontSize:12,fontWeight:600,color:"#1a1a2e"}}>{r}</span>
+              ))}
+            </div>
+          )}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingTop:12,borderTop:"1px solid #f0f0f0"}}>
+            <div>
+              <span style={{fontSize:22,fontWeight:800,color:"#1a1a2e"}}>{sym}{(obraActual.presupuesto||0).toLocaleString()}</span>
+              <span style={{fontSize:12,color:"#888",marginLeft:4}}>/h · {obraActual.moneda}</span>
+            </div>
+            <button onClick={e=>{e.stopPropagation();setPostViendo(obraActual);}}
+              style={{background:"#f0f0f8",border:"none",borderRadius:99,padding:"7px 14px",fontSize:12,fontWeight:600,color:"#1a1a2e",cursor:"pointer",fontFamily:"inherit"}}>
+              Ver más ↗
+            </button>
+          </div>
+        </div>
+      </div>
+      {/* Botones sutiles */}
+      <div style={{display:"flex",gap:20,marginTop:20,justifyContent:"center"}}>
+        <button onClick={()=>setFeedSkips(p=>[...p,obraActual.id])}
+          style={{width:56,height:56,borderRadius:"50%",border:"1.5px solid #E63946",
+            background:"#fff",color:"#E63946",fontSize:20,cursor:"pointer",
+            fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          ✕
+        </button>
+        <button onClick={()=>{setPosts(p=>[...p,obraActual.id]);toast_("Postulación enviada a "+obraActual.empresa);}}
+          style={{width:56,height:56,borderRadius:"50%",border:"1.5px solid #2A9D8F",
+            background:"#fff",color:"#2A9D8F",fontSize:20,cursor:"pointer",
+            fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          ✓
+        </button>
+      </div>
+      <div style={{textAlign:"center",color:"#bbb",fontSize:12,marginTop:10}}>Deslizá o usá los botones</div>
+    </div>
+  );
+};
+
 const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,onLogout,esPrimerLogin=false}) => {
   const esEmpresa = userRol==="empresa";
   const [tab,setTab]                   = useState(esEmpresa?"mis_busquedas":"swipe");
@@ -3426,34 +3529,30 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       <div style={{background:"#1a1a2e",color:"#fff",padding:"13px 20px 11px",
         display:"flex",justifyContent:"space-between",alignItems:"center",
         position:"sticky",top:0,zIndex:100}}>
-        <div>
-          <div style={{fontWeight:800,fontSize:20,letterSpacing:-.5}}>
-            S<span style={{color:"#F4A261"}}>afy</span>
-          </div>
-          <div style={{fontSize:10,color:"#aaa",marginTop:1,lineHeight:1.3}}>
-            {esEmpresa?("Panel empresa · "+(userData.empresa||userData.contacto||"")):"Match inteligente · SyH y MA"}
-          </div>
+        <div style={{flex:1}}/>
+        <div style={{fontWeight:800,fontSize:24,letterSpacing:-.5,textAlign:"center"}}>
+          S<span style={{color:"#F4A261"}}>afy</span>
         </div>
-        {tab==="swipe"&&!esEmpresa?(
-          <div style={{background:"rgba(255,255,255,0.15)",borderRadius:99,display:"flex",padding:3}}>
-            {[["profesional","Profesionales"],["obras","Empresas"]].map(([v,l])=>(
-              <button key={v} onClick={()=>{setVista(v);setIdx(0);}}
-                style={{background:vista===v?"#F4A261":"transparent",
-                  color:vista===v?"#1a1a2e":"#fff",border:"none",borderRadius:99,
-                  padding:"5px 12px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                {l}
-              </button>
-            ))}
-          </div>
-        ):tab==="perfil"?(
-          <button onClick={onLogout}
-            style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:99,
-              padding:"7px 13px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",
-              fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
-            Salir
-          </button>
-        ):(
-          esEmpresa&&tab==="mis_busquedas"?(
+        <div style={{flex:1,display:"flex",justifyContent:"flex-end"}}>
+          {tab==="swipe"&&!esEmpresa?(
+            <div style={{background:"rgba(255,255,255,0.15)",borderRadius:99,display:"flex",padding:3}}>
+              {[["profesional","Profesionales"],["obras","Empresas"]].map(([v,l])=>(
+                <button key={v} onClick={()=>{setVista(v);setIdx(0);}}
+                  style={{background:vista===v?"#F4A261":"transparent",
+                    color:vista===v?"#1a1a2e":"#fff",border:"none",borderRadius:99,
+                    padding:"5px 12px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          ):tab==="perfil"?(
+            <button onClick={onLogout}
+              style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:99,
+                padding:"7px 13px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",
+                fontFamily:"inherit"}}>
+              Salir
+            </button>
+          ):esEmpresa&&tab==="mis_busquedas"?(
             <button onClick={function(){setShowNueva(true);setEditBusq(null);}}
               style={{background:"#F4A261",border:"none",borderRadius:99,
                 padding:"7px 14px",color:"#1a1a2e",fontSize:12,fontWeight:800,
@@ -3461,14 +3560,9 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               + Nuevo aviso
             </button>
           ):(
-            <button onClick={function(){setEditando(true);}}
-              style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:99,
-                padding:"7px 13px",color:"#fff",fontSize:12,fontWeight:700,
-                cursor:"pointer",fontFamily:"inherit"}}>
-              Editar
-            </button>
-          )
-        )}
+            <div style={{width:60}}/>
+          )}
+        </div>
       </div>
 
       <div style={{flex:1,padding:"16px 16px 80px",overflowY:"auto"}}>
@@ -3533,15 +3627,15 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 </div>
                 <div style={{display:"flex",justifyContent:"center",gap:20}}>
                   <button onClick={()=>swipe("no")}
-                    style={{width:60,height:60,borderRadius:"50%",border:"2px solid #E63946",
-                      background:"#fff",color:"#E63946",fontSize:22,cursor:"pointer",
-                      boxShadow:"0 4px 12px rgba(230,57,70,.2)",fontFamily:"inherit"}}>
+                    style={{width:56,height:56,borderRadius:"50%",border:"1.5px solid #E63946",
+                      background:"#fff",color:"#E63946",fontSize:20,cursor:"pointer",
+                      fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
                     ✕
                   </button>
                   <button onClick={()=>swipe("yes")}
-                    style={{width:60,height:60,borderRadius:"50%",border:"2px solid #2A9D8F",
-                      background:"#fff",color:"#2A9D8F",fontSize:22,cursor:"pointer",
-                      boxShadow:"0 4px 12px rgba(42,157,143,.2)",fontFamily:"inherit"}}>
+                    style={{width:56,height:56,borderRadius:"50%",border:"1.5px solid #2A9D8F",
+                      background:"#fff",color:"#2A9D8F",fontSize:20,cursor:"pointer",
+                      fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
                     ✓
                   </button>
                 </div>
@@ -3553,62 +3647,18 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           </div>
         )}
 
-        {/* OPORTUNIDADES — swipe de a una */}
-        {tab==="feed"&&!esEmpresa&&(()=>{
-          const feedItems = obras.filter(o=>!posts.includes(o.id)&&!feedSkips.includes(o.id));
-          const feedIdx   = feedItems.length > 0 ? 0 : -1;
-          const obraActual = feedItems[0] || null;
-          const totalVistas = posts.filter(id=>obras.some(o=>o.id===id)).length;
-          return (
-            <div>
-              <div style={{fontSize:13,color:"#888",marginBottom:16,display:"flex",justifyContent:"space-between"}}>
-                <span>{feedItems.length} oportunidades restantes</span>
-                {totalVistas>0&&<span style={{color:"#2A9D8F",fontWeight:600}}>{totalVistas} enviadas ✓</span>}
-              </div>
-              {obraActual?(
-                <div style={{position:"relative"}}>
-                  <FeedItem obra={obraActual} yaPostulado={false}
-                    onPostular={ob=>{
-                      setPosts(p=>[...p,ob.id]);
-                      toast_("Postulación enviada a "+ob.empresa);
-                    }}/>
-                  {/* Botones ✗ / ✓ estilo swipe */}
-                  <div style={{display:"flex",gap:16,marginTop:16,justifyContent:"center"}}>
-                    <button onClick={()=>setFeedSkips(p=>[...p,obraActual.id])}
-                      style={{width:64,height:64,borderRadius:"50%",
-                        border:"2px solid #E63946",background:"#fff",
-                        color:"#E63946",fontSize:28,fontWeight:700,
-                        cursor:"pointer",fontFamily:"inherit",
-                        display:"flex",alignItems:"center",justifyContent:"center",
-                        boxShadow:"0 4px 16px rgba(230,57,70,0.2)"}}>
-                      ✕
-                    </button>
-                    <button onClick={()=>{
-                      setPosts(p=>[...p,obraActual.id]);
-                      toast_("Postulación enviada a "+obraActual.empresa);
-                    }}
-                      style={{width:64,height:64,borderRadius:"50%",
-                        border:"none",background:"#2A9D8F",
-                        color:"#fff",fontSize:28,fontWeight:700,
-                        cursor:"pointer",fontFamily:"inherit",
-                        display:"flex",alignItems:"center",justifyContent:"center",
-                        boxShadow:"0 4px 16px rgba(42,157,143,0.3)"}}>
-                      ✓
-                    </button>
-                  </div>
-                </div>
-              ):(
-                <div style={{textAlign:"center",padding:"60px 20px",color:"#999"}}>
-                  <div style={{fontSize:48,marginBottom:12}}>🎉</div>
-                  <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>¡Revisaste todas las oportunidades!</div>
-                  <div style={{fontSize:13,lineHeight:1.5}}>
-                    Volvé más tarde para ver nuevas búsquedas en tu zona.
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        {/* OPORTUNIDADES */}
+        {tab==="feed"&&!esEmpresa&&(
+          <OportunidadesSwipe
+            obras={obras}
+            posts={posts}
+            feedSkips={feedSkips}
+            setPosts={setPosts}
+            setFeedSkips={setFeedSkips}
+            setPostViendo={setPostViendo}
+            toast_={toast_}
+          />
+        )}
 
         {/* MIS BÚSQUEDAS */}
         {tab==="mis_busquedas"&&(
