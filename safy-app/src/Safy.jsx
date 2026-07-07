@@ -79,21 +79,39 @@ const supa = {
   },
 
   async upsertProfile(token, profile) {
-    console.log("upsertProfile — token:", token ? token.slice(0,20)+"..." : "NULL");
-    console.log("upsertProfile — profile:", JSON.stringify(profile));
-    const r = await fetch(SUPA_URL + "/rest/v1/profiles", {
-      method: "POST",
+    const {id, ...data} = profile;
+    console.log("upsertProfile — userId:", id, "token:", token?.slice(0,20));
+    // Usar PATCH para actualizar el perfil existente (creado por trigger)
+    const r = await fetch(SUPA_URL + "/rest/v1/profiles?id=eq." + id, {
+      method: "PATCH",
       headers: {
-        ...this.headers,
+        "Content-Type": "application/json",
+        "apikey": SUPA_KEY,
         "Authorization": "Bearer " + token,
-        "Prefer": "resolution=merge-duplicates,return=representation"
+        "Prefer": "return=minimal"
       },
-      body: JSON.stringify(profile)
+      body: JSON.stringify(data)
     });
     const text = await r.text();
-    console.log("upsertProfile — status:", r.status, "response:", text);
-    if (!r.ok) return { error: text };
-    return { data: true };
+    console.log("upsertProfile PATCH — status:", r.status, "body:", text.slice(0,200));
+    if(!r.ok) {
+      // Si el PATCH falla, intentar POST
+      console.log("PATCH falló, intentando POST...");
+      const r2 = await fetch(SUPA_URL + "/rest/v1/profiles", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPA_KEY,
+          "Authorization": "Bearer " + token,
+          "Prefer": "resolution=merge-duplicates,return=minimal"
+        },
+        body: JSON.stringify({id, ...data})
+      });
+      const text2 = await r2.text();
+      console.log("POST fallback — status:", r2.status, "body:", text2.slice(0,200));
+      if(!r2.ok) return {error: text2};
+    }
+    return {data: true};
   },
 
   async getProfile(token, userId) {
@@ -4758,6 +4776,7 @@ export default function Safy() {
       if(authData) supa.saveSession(authData);
 
       // Guardar perfil en Supabase — esperar resultado
+      console.log("onComplete — authData:", authData ? {token: authData.token?.slice(0,30), userId: authData.user?.id, email: authData.email} : "NULL");
       if(authData?.token && authData?.user?.id) {
         const profileData = {
           id: authData.user.id, rol,
