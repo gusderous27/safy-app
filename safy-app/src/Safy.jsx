@@ -79,12 +79,20 @@ const supa = {
   },
 
   async upsertProfile(token, profile) {
+    console.log("upsertProfile — token:", token ? token.slice(0,20)+"..." : "NULL");
+    console.log("upsertProfile — profile:", JSON.stringify(profile));
     const r = await fetch(SUPA_URL + "/rest/v1/profiles", {
       method: "POST",
-      headers: { ...this.headers, "Authorization": "Bearer " + token, "Prefer": "resolution=merge-duplicates" },
+      headers: {
+        ...this.headers,
+        "Authorization": "Bearer " + token,
+        "Prefer": "resolution=merge-duplicates,return=representation"
+      },
       body: JSON.stringify(profile)
     });
-    if (!r.ok) { const e = await r.text(); return { error: e }; }
+    const text = await r.text();
+    console.log("upsertProfile — status:", r.status, "response:", text);
+    if (!r.ok) return { error: text };
     return { data: true };
   },
 
