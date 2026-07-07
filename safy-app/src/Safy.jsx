@@ -3562,11 +3562,11 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         </div>
       </div>
 
-      <div style={{flex:1,padding:"16px 16px 80px",overflowY:"auto"}}>
+      <div style={{flex:1,padding:"16px 0 80px",overflowY:"auto"}}>
 
         {/* SWIPE */}
         {tab==="swipe"&&!esEmpresa&&(
-          <div>
+          <div style={{padding:"0 12px"}}>
             {/* Panel filtros */}
             {showFiltros&&(
               <div style={{background:"#fff",borderRadius:16,padding:16,marginBottom:14,
@@ -3650,20 +3650,22 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
 
         {/* OPORTUNIDADES */}
         {tab==="feed"&&!esEmpresa&&(
-          <OportunidadesSwipe
-            obras={obras}
-            posts={posts}
-            feedSkips={feedSkips}
-            setPosts={setPosts}
-            setFeedSkips={setFeedSkips}
-            setPostViendo={setPostViendo}
-            toast_={toast_}
-          />
+          <div style={{padding:"0 12px"}}>
+            <OportunidadesSwipe
+              obras={obras}
+              posts={posts}
+              feedSkips={feedSkips}
+              setPosts={setPosts}
+              setFeedSkips={setFeedSkips}
+              setPostViendo={setPostViendo}
+              toast_={toast_}
+            />
+          </div>
         )}
 
         {/* MIS BÚSQUEDAS */}
         {tab==="mis_busquedas"&&(
-          <div>
+          <div style={{padding:"0 12px"}}>
             {esEmpresa?(
               <>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
@@ -3851,7 +3853,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               </div>
             </div>
           ):(
-            <div>
+            <div style={{padding:"0 12px"}}>
               <div style={{fontSize:13,color:"#888",marginBottom:16}}>
                 {listaConexiones.length} conexion{listaConexiones.length!==1?"es":""} activa{listaConexiones.length!==1?"s":""}
               </div>
@@ -3957,7 +3959,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
 
         {/* MI PERFIL */}
         {tab==="perfil"&&(
-          <div>
+          <div style={{padding:"0 12px"}}>
             <div style={{background:"#fff",borderRadius:16,padding:20,
               boxShadow:"0 2px 12px rgba(0,0,0,0.08)",marginBottom:14}}>
               <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:16}}>
@@ -4725,7 +4727,7 @@ export default function Safy() {
       apellido: authData.user?.user_metadata?.full_name?.split(" ").slice(1).join(" ") || "",
       email: authData.email || "",
       foto: authData.user?.user_metadata?.avatar_url || "",
-    } : null} onComplete={(rol,data)=>{
+    } : null} onComplete={async (rol,data)=>{
       setUserRol(rol);
       setPrimerLogin(true);
       setUserData({...data, email: authData?.email||data.email});
@@ -4752,20 +4754,35 @@ export default function Safy() {
           supa.createJob(authData.token, {...primerAviso, empresa_id: authData.user?.id}).catch(()=>{});
         }
       }
+      // Guardar sesión
+      if(authData) supa.saveSession(authData);
+
+      // Guardar perfil en Supabase — esperar resultado
       if(authData?.token && authData?.user?.id) {
-        supa.upsertProfile(authData.token, {
+        const profileData = {
           id: authData.user.id, rol,
           email: authData.email || data.email,
-          nombre: data.nombre || null, apellido: data.apellido || null,
-          empresa: data.empresa || null, tel: data.tel || null,
-          pais: data.pais || null, provincia: data.provincia || null,
-          ciudad: data.ciudad || null, titulo: data.titulo || null,
+          nombre: data.nombre || null,
+          apellido: data.apellido || null,
+          empresa: data.empresa || null,
+          tel: data.tel || null,
+          pais: data.pais || null,
+          provincia: data.provincia || null,
+          ciudad: data.ciudad || null,
+          titulo: data.titulo || null,
           tarifa: data.tarifa ? Number(data.tarifa) : null,
-          moneda: data.moneda || "ARS", skills: data.skills || [],
-          perfil: data.descripcion || null, disponible: true,
-          lat: data.lat || null, lng: data.lng || null,
+          moneda: data.moneda || "ARS",
+          skills: data.skills || [],
+          perfil: data.descripcion || null,
+          disponible: true,
+          lat: data.lat || null,
+          lng: data.lng || null,
           radio: Number(data.radio) || 30,
-        }).catch(()=>{});
+        };
+        const result = await supa.upsertProfile(authData.token, profileData);
+        console.log("Resultado upsertProfile:", result);
+      } else {
+        console.warn("Sin authData — no se pudo guardar perfil", authData);
       }
       setPhase("app");
     }}/>
