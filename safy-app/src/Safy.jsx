@@ -3534,18 +3534,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           S<span style={{color:"#F4A261"}}>afy</span>
         </div>
         <div style={{flex:1,display:"flex",justifyContent:"flex-end"}}>
-          {tab==="swipe"&&!esEmpresa?(
-            <div style={{background:"rgba(255,255,255,0.15)",borderRadius:99,display:"flex",padding:3}}>
-              {[["profesional","Profesionales"],["obras","Empresas"]].map(([v,l])=>(
-                <button key={v} onClick={()=>{setVista(v);setIdx(0);}}
-                  style={{background:vista===v?"#F4A261":"transparent",
-                    color:vista===v?"#1a1a2e":"#fff",border:"none",borderRadius:99,
-                    padding:"5px 12px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                  {l}
-                </button>
-              ))}
-            </div>
-          ):tab==="perfil"?(
+          {tab==="perfil"?(
             <button onClick={onLogout}
               style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:99,
                 padding:"7px 13px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",
@@ -3615,11 +3604,15 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               </div>
             ):(
               <>
-                <div style={{position:"relative",height:520,marginBottom:20}}>
+                <div style={{position:"relative",marginBottom:16}}>
                   {remaining.slice(0,3).map((item,i)=>(
-                    <div key={item.id} style={{position:"absolute",width:"100%",zIndex:3-i,
-                      transform:i>0?("scale("+(1-i*.04)+") translateY("+(i*12)+"px)"):"none",
-                      transformOrigin:"top center"}}>
+                    <div key={item.id} style={{
+                      position:i===0?"relative":"absolute",
+                      top:0,width:"100%",zIndex:3-i,
+                      transform:i>0?("scale("+(1-i*.03)+") translateY("+(i*10)+"px)"):"none",
+                      transformOrigin:"top center",
+                      pointerEvents:i===0?"auto":"none",
+                    }}>
                       <SwipeCard item={item} type={vista==="profesional"?"profesional":"obra"}
                         onSwipe={swipe} isTop={i===0}/>
                     </div>
@@ -3918,17 +3911,6 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                         color:"#fff",border:"none",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                       Chatear
                     </button>
-                    {!esEmpresa&&(
-                      <>
-                        <button onClick={function(){setPerfilViendo(m);}}
-                          style={{padding:"10px 12px",borderRadius:12,background:"#fff3e0",color:"#F4A261",
-                            border:"1.5px solid #F4A261",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}
-                          title="Valorar">
-                          ★
-                        </button>
-
-                      </>
-                    )}
                     {esEmpresa&&(
                       confirmElim===i?(
                         <div style={{display:"flex",gap:6}}>
@@ -4684,6 +4666,27 @@ export default function Safy() {
     </div>
   );
 
+  // Función central de login — busca perfil en Supabase antes de decidir
+  const handleLogin = async (auth) => {
+    setAuthData(auth);
+    setPhase("loading");
+    try {
+      const profile = await supa.getProfile(auth.token, auth.user.id);
+      if(profile && profile.rol) {
+        // Usuario existente — ir directo a la app
+        supa.saveSession(auth);
+        setUserRol(profile.rol);
+        setUserData({...profile, email: auth.email || profile.email});
+        setPhase("app");
+      } else {
+        // Usuario nuevo — completar onboarding
+        setPhase("onboarding");
+      }
+    } catch(e) {
+      setPhase("onboarding");
+    }
+  };
+
   if(phase==="login") return (
     <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#f0f0f8",
       minHeight:"100vh",display:"flex",flexDirection:"column",maxWidth:420,margin:"0 auto"}}>
@@ -4692,7 +4695,7 @@ export default function Safy() {
         <button onClick={()=>setPhase("welcome")} style={{background:"none",border:"none",color:"#888",fontSize:22,cursor:"pointer",padding:0,fontFamily:"inherit"}}>‹</button>
         <span style={{fontWeight:800,fontSize:18,color:"#1a1a2e",letterSpacing:-.5}}>S<span style={{color:"#F4A261"}}>afy</span></span>
       </div>
-      <LoginScreen onLogin={(auth)=>{setAuthData(auth);setPhase("onboarding");}} isRegistro={false}/>
+      <LoginScreen onLogin={handleLogin} isRegistro={false}/>
     </div>
   );
 
@@ -4704,7 +4707,7 @@ export default function Safy() {
         <button onClick={()=>setPhase("welcome")} style={{background:"none",border:"none",color:"#888",fontSize:22,cursor:"pointer",padding:0,fontFamily:"inherit"}}>‹</button>
         <span style={{fontWeight:800,fontSize:18,color:"#1a1a2e",letterSpacing:-.5}}>S<span style={{color:"#F4A261"}}>afy</span></span>
       </div>
-      <LoginScreen onLogin={(auth)=>{setAuthData(auth);setPhase("onboarding");}} isRegistro={true}/>
+      <LoginScreen onLogin={handleLogin} isRegistro={true}/>
     </div>
   );
 
