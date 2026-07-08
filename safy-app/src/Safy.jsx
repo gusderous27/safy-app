@@ -5,6 +5,24 @@ import { useState, useRef, useEffect, createElement } from "react";
 const SUPA_URL = "https://ojslewybmcayfmvuhqsc.supabase.co";
 const SUPA_KEY = "sb_publishable_JmENOILK3rOPz9-0IqcA1A_1or2An5-";
 
+// ─── PAGOS ───────────────────────────────────────────────────────────────────
+
+const STRIPE_PK = "pk_test_51Tr1t9Qkrzuq7ECFNPPay8IvwsD2aEVSRERncvMAawdiEAPOXnmk6s1vIYJYVr0CXRxUyLpoGZO4R6tNxsSXEdMW00Mfg4QqCI";
+const MP_PUBLIC_KEY = "APP_USR-6f4a7b96-4f9d-448d-a34f-20ee96ca9ffc";
+
+const PLANES = {
+  profesional_mensual: { id: "price_1Tr23hQkrzuq7ECF4P9iF6TV", precio: 2.99, moneda: "USD", periodo: "mensual", label: "$2.99/mes" },
+  profesional_anual:   { id: "price_1Tr24JQkrzuq7ECF9eAghfLO", precio: 34.18, moneda: "USD", periodo: "anual", label: "$34.18/año" },
+  empresa_mensual:     { id: "price_1Tr24iQkrzuq7ECFsygfUf9u", precio: 9.99, moneda: "USD", periodo: "mensual", label: "$9.99/mes" },
+  empresa_anual:       { id: "price_1Tr255Qkrzuq7ECFvFVOROvV", precio: 113.89, moneda: "USD", periodo: "anual", label: "$113.89/año" },
+};
+
+// Límites del plan gratuito
+const LIMITES_GRATIS = {
+  profesional: { swipes_dia: 20, postulaciones_dia: 5 },
+  empresa:     { avisos: 3, candidatos_visibles: 5 },
+};
+
 // ─── HAVERSINE — distancia entre dos coordenadas en km ───────────────────────
 const haversine = (lat1, lng1, lat2, lng2) => {
   const R = 6371;
@@ -164,8 +182,22 @@ const supa = {
     });
   },
 
-  async recordMatch(token, userId, targetId) {
-    await fetch(SUPA_URL + "/rest/v1/matches", {
+  async getSubscription(token, userId) {
+    const r = await fetch(SUPA_URL + "/rest/v1/subscriptions?user_id=eq." + userId + "&estado=eq.activa&select=*&order=created_at.desc&limit=1", {
+      headers: { ...this.headers, "Authorization": "Bearer " + token }
+    });
+    const d = await r.json();
+    return Array.isArray(d) ? (d[0] || null) : null;
+  },
+
+  async saveSubscription(token, sub) {
+    const r = await fetch(SUPA_URL + "/rest/v1/subscriptions", {
+      method: "POST",
+      headers: { ...this.headers, "Authorization": "Bearer " + token, "Prefer": "return=minimal" },
+      body: JSON.stringify(sub)
+    });
+    return r.ok;
+  },
       method: "POST",
       headers: { ...this.headers, "Authorization": "Bearer " + token },
       body: JSON.stringify({ user1_id: userId, user2_id: String(targetId) })
@@ -1023,6 +1055,212 @@ const TourContextual = ({rol, tabActual, setTab, onFin}) => {
         </div>
       </div>
     </>
+  );
+};
+
+// ─── PANTALLA SUSCRIPCIÓN ─────────────────────────────────────────────────────
+
+const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
+  const [periodo, setPeriodo] = useState("mensual");
+  const [loading, setLoading] = useState(false);
+  const [metodo, setMetodo] = useState("stripe"); // 'stripe' o 'mp'
+
+  const planKey = rol + "_" + periodo;
+  const plan = PLANES[planKey];
+  const precioAnual = PLANES[rol + "_anual"];
+  const precioMensual = PLANES[rol + "_mensual"];
+
+  const beneficios = rol === "profesional" ? [
+    "⭐ Aparecés primero en las búsquedas",
+    "🔔 Acceso prioritario a ofertas nuevas",
+    "👁️ Ves quién visitó tu perfil",
+    "📊 Estadísticas de tu perfil",
+    "✅ Badge Pro verificado",
+    "💬 Mensajes ilimitados",
+  ] : [
+    "📋 Avisos ilimitados (gratis: hasta 3)",
+    "👥 Ves todos los candidatos (gratis: 5)",
+    "⭐ Destacar avisos en el feed",
+    "📈 Estadísticas de cada aviso",
+    "🎯 Filtros avanzados de búsqueda",
+    "✅ Badge empresa verificada",
+  ];
+
+  const handleStripe = async () => {
+    setLoading(true);
+    try {
+      // Redirigir a Stripe Checkout
+      const stripe = window.Stripe ? window.Stripe(STRIPE_PK) : null;
+      if(!stripe) {
+        // Cargar Stripe.js dinámicamente
+        const script = document.createElement("script");
+        script.src = "https://js.stripe.com/v3/";
+        script.onload = async () => {
+          const s = window.Stripe(STRIPE_PK);
+          await s.redirectToCheckout({
+            lineItems: [{price: plan.id, quantity: 1}],
+            mode: "subscription",
+            successUrl: window.location.origin + "?sub=ok&plan=" + planKey,
+            cancelUrl: window.location.origin + "?sub=cancel",
+            customerEmail: authData?.email,
+          });
+        };
+        document.head.appendChild(script);
+      } else {
+        await stripe.redirectToCheckout({
+          lineItems: [{price: plan.id, quantity: 1}],
+          mode: "subscription",
+          successUrl: window.location.origin + "?sub=ok&plan=" + planKey,
+          cancelUrl: window.location.origin + "?sub=cancel",
+          customerEmail: authData?.email,
+        });
+      }
+    } catch(e) {
+      console.error("Error Stripe:", e);
+      alert("Error al procesar el pago. Intentá de nuevo.");
+    }
+    setLoading(false);
+  };
+
+  const handleMP = async () => {
+    setLoading(true);
+    try {
+      // Crear preferencia de pago en MercadoPago via backend
+      const r = await fetch("https://api.mercadopago.com/preapproval", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer APP_USR-1118779140338502-070816-36a8be5a40fd6e1de513100ba5bf6d7f-92004436",
+        },
+        body: JSON.stringify({
+          reason: "SafyJobs " + (rol === "profesional" ? "Pro" : "Empresa") + " - " + periodo,
+          auto_recurring: {
+            frequency: periodo === "mensual" ? 1 : 12,
+            frequency_type: "months",
+            transaction_amount: plan.precio,
+            currency_id: "ARS",
+          },
+          back_url: window.location.origin + "?sub=ok&plan=" + planKey,
+          payer_email: authData?.email,
+          status: "pending",
+        }),
+      });
+      const data = await r.json();
+      if(data.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        throw new Error("No se pudo crear la suscripción");
+      }
+    } catch(e) {
+      console.error("Error MP:", e);
+      alert("Error al procesar el pago. Intentá con tarjeta internacional.");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(26,26,46,0.97)",zIndex:2000,
+      display:"flex",flexDirection:"column",maxWidth:420,margin:"0 auto",overflowY:"auto"}}>
+      <style>{`@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}`}</style>
+
+      {/* Header */}
+      <div style={{padding:"20px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <button onClick={onClose} style={{background:"none",border:"none",color:"#aaa",fontSize:22,cursor:"pointer",fontFamily:"inherit"}}>‹</button>
+        <div style={{fontWeight:800,fontSize:18,color:"#fff"}}>S<span style={{color:"#F4A261"}}>afy</span> Pro</div>
+        <div style={{width:32}}/>
+      </div>
+
+      {/* Hero */}
+      <div style={{textAlign:"center",padding:"24px 20px 20px"}}>
+        <div style={{fontSize:56,marginBottom:8}}>{rol==="profesional"?"🦺":"🏗️"}</div>
+        <div style={{fontWeight:800,fontSize:24,color:"#fff",marginBottom:6}}>
+          {rol==="profesional"?"Plan Profesional Pro":"Plan Empresa Pro"}
+        </div>
+        <div style={{fontSize:14,color:"#8899bb",lineHeight:1.5}}>
+          Desbloqueá todas las funciones y destacate en SafyJobs
+        </div>
+      </div>
+
+      {/* Toggle periodo */}
+      <div style={{display:"flex",justifyContent:"center",marginBottom:20,padding:"0 20px"}}>
+        <div style={{background:"rgba(255,255,255,0.1)",borderRadius:99,display:"flex",padding:4,width:"100%",maxWidth:280}}>
+          {["mensual","anual"].map(p=>(
+            <button key={p} onClick={()=>setPeriodo(p)}
+              style={{flex:1,padding:"8px 0",borderRadius:99,border:"none",
+                background:periodo===p?"#F4A261":"transparent",
+                color:periodo===p?"#1a1a2e":"#aaa",fontWeight:700,fontSize:13,
+                cursor:"pointer",fontFamily:"inherit",position:"relative"}}>
+              {p==="mensual"?"Mensual":"Anual"}
+              {p==="anual"&&<span style={{position:"absolute",top:-8,right:-4,background:"#2A9D8F",
+                color:"#fff",fontSize:9,fontWeight:800,padding:"2px 6px",borderRadius:99}}>-5%</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Precio */}
+      <div style={{textAlign:"center",marginBottom:20}}>
+        <div style={{fontSize:48,fontWeight:800,color:"#fff",lineHeight:1}}>
+          {plan.precio.toLocaleString("es-AR",{style:"currency",currency:"USD"})}
+        </div>
+        <div style={{fontSize:13,color:"#8899bb",marginTop:4}}>
+          {periodo==="anual"
+            ? `Equivale a ${(plan.precio/12).toFixed(2)} USD/mes · Ahorrás ${(precioMensual.precio*12-plan.precio).toFixed(2)} USD`
+            : "por mes · cancelá cuando quieras"}
+        </div>
+      </div>
+
+      {/* Beneficios */}
+      <div style={{padding:"0 20px",marginBottom:20}}>
+        <div style={{background:"rgba(255,255,255,0.05)",borderRadius:16,padding:16}}>
+          {beneficios.map((b,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,
+              padding:"8px 0",borderBottom:i<beneficios.length-1?"1px solid rgba(255,255,255,0.05)":"none"}}>
+              <span style={{fontSize:14}}>{b.split(" ")[0]}</span>
+              <span style={{fontSize:13,color:"#ccd",fontWeight:500}}>{b.split(" ").slice(1).join(" ")}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Método de pago */}
+      <div style={{padding:"0 20px",marginBottom:16}}>
+        <div style={{fontSize:12,color:"#8899bb",fontWeight:600,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>
+          Elegí tu método de pago
+        </div>
+        <div style={{display:"flex",gap:8,marginBottom:12}}>
+          {[
+            {v:"stripe",l:"💳 Tarjeta internacional"},
+            {v:"mp",l:"🔵 MercadoPago"},
+          ].map(m=>(
+            <button key={m.v} onClick={()=>setMetodo(m.v)}
+              style={{flex:1,padding:"10px 8px",borderRadius:12,fontSize:12,fontWeight:700,
+                border:metodo===m.v?"2px solid #F4A261":"2px solid rgba(255,255,255,0.1)",
+                background:metodo===m.v?"rgba(244,162,97,0.1)":"transparent",
+                color:metodo===m.v?"#F4A261":"#aaa",cursor:"pointer",fontFamily:"inherit"}}>
+              {m.l}
+            </button>
+          ))}
+        </div>
+
+        {/* Botón pagar */}
+        <button
+          onClick={metodo==="stripe" ? handleStripe : handleMP}
+          disabled={loading}
+          style={{width:"100%",padding:"16px",borderRadius:16,border:"none",
+            background:loading?"#444":"linear-gradient(135deg, #F4A261, #e8853d)",
+            color:"#1a1a2e",fontWeight:800,fontSize:16,cursor:loading?"not-allowed":"pointer",
+            fontFamily:"inherit",boxShadow:"0 4px 20px rgba(244,162,97,0.4)"}}>
+          {loading?"Procesando...":`Suscribirme por ${plan.label}`}
+        </button>
+      </div>
+
+      {/* Footer */}
+      <div style={{textAlign:"center",padding:"0 20px 32px",fontSize:11,color:"#556",lineHeight:1.6}}>
+        Pago seguro · Cancelá cuando quieras · Sin permanencia
+        <br/>Al suscribirte aceptás los <span style={{color:"#F4A261"}}>Términos</span> de SafyJobs
+      </div>
+    </div>
   );
 };
 
@@ -3254,6 +3492,9 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   const [showTour,setShowTour]         = useState(esPrimerLogin);
   const [dbProfiles,setDbProfiles]     = useState([]);
   const [loadingProfiles,setLoadingProfiles] = useState(false);
+  const [showSub,setShowSub]           = useState(false);
+  const [suscripcion,setSuscripcion]   = useState(null); // null = free
+  const esPro = suscripcion?.estado === "activa";
   // Profesional no necesita obras de Root — empresa sí
   const [obrasLocales, setObrasLocales] = useState(esEmpresa ? (initObras||[]) : (initObras||[]));
   const obras = obrasLocales;
@@ -3317,6 +3558,40 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     };
     loadProfiles();
   },[]);
+
+  // Verificar suscripción activa y retorno de pago
+  useEffect(()=>{
+    const checkSub = async () => {
+      if(!authData?.token || !authData?.user?.id) return;
+      // Verificar si viene de un pago exitoso
+      const params = new URLSearchParams(window.location.search);
+      if(params.get("sub")==="ok") {
+        const planKey = params.get("plan") || "";
+        const planInfo = PLANES[planKey];
+        if(planInfo && authData?.token) {
+          const vencimiento = new Date();
+          if(planInfo.periodo==="mensual") vencimiento.setMonth(vencimiento.getMonth()+1);
+          else vencimiento.setFullYear(vencimiento.getFullYear()+1);
+          const newSub = {
+            user_id: authData.user.id,
+            plan: planKey.split("_")[0],
+            periodo: planInfo.periodo,
+            estado: "activa",
+            vencimiento: vencimiento.toISOString(),
+          };
+          await supa.saveSubscription(authData.token, newSub);
+          setSuscripcion({...newSub, estado:"activa"});
+          window.history.replaceState(null,"",window.location.pathname);
+        }
+      }
+      // Cargar suscripción existente
+      try {
+        const sub = await supa.getSubscription(authData.token, authData.user.id);
+        if(sub) setSuscripcion(sub);
+      } catch(e) {}
+    };
+    checkSub();
+  },[authData]);
 
   const empNombre = userData.empresa||userData.nombre||"";
   const misObrasEmpresa = esEmpresa
@@ -3418,16 +3693,39 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         <div style={{fontSize:13,color:"#888",marginBottom:16}}>
           Profesionales que se postularon
         </div>
-        {CANDS.map((c,i)=>(
+        {CANDS.map((c,i)=>{
+          const bloqueado = !esPro && i >= LIMITES_GRATIS.empresa.candidatos_visibles;
+          return (
           <div key={i} style={{background:"#fff",borderRadius:16,padding:16,marginBottom:12,
-            boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
+            boxShadow:"0 2px 10px rgba(0,0,0,0.07)",position:"relative",
+            overflow:"hidden"}}>
+            {/* Blur overlay para candidatos bloqueados */}
+            {bloqueado&&(
+              <div style={{position:"absolute",inset:0,backdropFilter:"blur(6px)",
+                background:"rgba(255,255,255,0.7)",zIndex:10,display:"flex",
+                flexDirection:"column",alignItems:"center",justifyContent:"center",
+                borderRadius:16}}>
+                <div style={{fontSize:28,marginBottom:8}}>🔒</div>
+                <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e",marginBottom:4}}>
+                  Candidato bloqueado
+                </div>
+                <div style={{fontSize:12,color:"#888",textAlign:"center",marginBottom:12,padding:"0 16px"}}>
+                  Suscribite para ver todos los candidatos
+                </div>
+                <button onClick={()=>setShowSub(true)}
+                  style={{background:"linear-gradient(135deg,#F4A261,#e8853d)",border:"none",
+                    borderRadius:99,padding:"8px 20px",fontWeight:800,fontSize:13,
+                    color:"#1a1a2e",cursor:"pointer",fontFamily:"inherit"}}>
+                  ⭐ Ver plan Pro
+                </button>
+              </div>
+            )}
             <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
               <Av init={c.avatar} color={c.color} size={52}/>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e"}}>{c.nombre}</div>
                 <div style={{fontSize:12,color:"#888"}}>{TITULOS[c.titulo]} · {c.ciudad}</div>
                 <div style={{fontSize:11,color:"#aaa",marginTop:2}}>{c.fechaPost}</div>
-                {/* Rating del profesional */}
                 {c.rating&&(
                   <div style={{display:"flex",alignItems:"center",gap:4,marginTop:4}}>
                     {[1,2,3,4,5].map(n=>(
@@ -3509,7 +3807,8 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -3519,6 +3818,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       minHeight:"100vh",display:"flex",flexDirection:"column",maxWidth:420,margin:"0 auto",position:"relative"}}>
       <style>{CSS}</style>
       {showTour&&<TourContextual rol={userRol} tabActual={tab} setTab={setTab} onFin={()=>{setShowTour(false);try{localStorage.setItem("safy_tour_done","1");}catch(e){}}}/>}
+      {showSub&&<PantallaSubscripcion rol={userRol} onClose={()=>setShowSub(false)} authData={authData} onSubscribed={sub=>setSuscripcion(sub)}/>}
       {editando&&<EditarCuenta userData={userData} userRol={userRol}
         onSave={d=>{setUserData(d);setEditando(false);toast_("Perfil actualizado");}}
         onClose={()=>setEditando(false)}
@@ -4129,14 +4429,28 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               </div>
             </div>
             {!verificado&&(
-              <button onClick={function(){setShowSusc(true);}}
-                style={{width:"100%",padding:14,borderRadius:14,border:"1.5px solid #1D9BF0",
-                  background:"#fff",color:"#1D9BF0",fontWeight:700,fontSize:14,
-                  cursor:"pointer",fontFamily:"inherit",marginBottom:10,
-                  display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-                <BadgeVerificado size={16}/>
-                {esEmpresa?"Verificá tu empresa":"Verificá tu cuenta"}
-              </button>
+              {esPro ? (
+                <div style={{background:"linear-gradient(135deg,#F4A261,#e8853d)",borderRadius:14,
+                  padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:20}}>⭐</span>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e"}}>Plan Pro activo</div>
+                    <div style={{fontSize:12,color:"rgba(26,26,46,0.7)"}}>
+                      {suscripcion?.vencimiento ? "Vence " + new Date(suscripcion.vencimiento).toLocaleDateString("es-AR") : ""}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={()=>setShowSub(true)}
+                  style={{width:"100%",padding:14,borderRadius:14,
+                    background:"linear-gradient(135deg,#F4A261,#e8853d)",
+                    border:"none",color:"#1a1a2e",fontWeight:800,fontSize:15,
+                    cursor:"pointer",fontFamily:"inherit",marginBottom:10,
+                    display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                    boxShadow:"0 4px 16px rgba(244,162,97,0.4)"}}>
+                  ⭐ {esEmpresa?"Suscribirse · $9.99/mes":"Suscribirse · $2.99/mes"}
+                </button>
+              )}
             )}
             <button onClick={function(){setEditando(true);}}
               style={{width:"100%",padding:15,borderRadius:14,border:"1.5px solid #1a1a2e",
