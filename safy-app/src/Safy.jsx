@@ -3296,7 +3296,9 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
   const [requisitos,setRequisitos] = useState(init.requisitos||[]);
   const [portales, setPortales] = useState(init.portales||[]);
   const [linkPostulacion, setLinkPostulacion] = useState(init.linkPostulacion||"");
-  const [empresaNombre, setEmpresaNombre] = useState(init.empresaNombre||"");
+  const [empresaNombre, setEmpresaNombre] = useState(
+    init.empresaNombre || (esEmpresa ? (userData.empresa||"") : "")
+  );
   const [confidencial, setConfidencial] = useState(init.confidencial||false);
 
   const PORTALES_EMPLEO = [
@@ -3385,7 +3387,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
       var estadoNuevo = limiteAlcanzado?"pausada":"activa";
       var nuevo = {
         id:esEdicion?busquedaEditar.id:Date.now(),
-        empresa:confidencial?"Empresa confidencial":(empresaNombre||empNombre),
+        empresa:confidencial?"Empresa confidencial":(esEmpresa?(userData.empresa||empNombre):(empresaNombre||empNombre)),
         confidencial:confidencial,
         tipo:tipo||"Busqueda",ciudad:ciudad,distancia:5,
         presupuesto:Number(pres)||0,moneda:moneda,duracion:"A convenir",urgente:urgente,
@@ -3504,7 +3506,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
         {/* Requisitos de título */}
         <div style={{marginBottom:18}}>
           <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
-            Título requerido <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+            {esEmpresa?"Perfil requerido":"Título que tenés"} <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
           </label>
           <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
             {[
@@ -3533,35 +3535,59 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
         {/* Empresa que publica */}
         <div style={{marginBottom:18}}>
           <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
-            Empresa que busca
+            {esEmpresa?"Empresa":"Empresa que busca"}
           </label>
-          <div style={{display:"flex",gap:8,marginBottom:8}}>
-            <button onClick={()=>upd&&null} style={{display:"none"}}/>
-            {[{v:false,l:"🏢 Mostrar empresa"},{v:true,l:"🔒 Confidencial"}].map(op=>(
-              <button key={String(op.v)}
-                onClick={()=>{
-                  if(op.v) { setEmpresaNombre(""); setConfidencial(true); }
-                  else setConfidencial(false);
-                }}
-                style={{flex:1,padding:"9px",borderRadius:12,fontSize:12,fontWeight:700,
-                  border:confidencial===op.v?"2px solid #1a1a2e":"1.5px solid #e0e0ef",
-                  background:confidencial===op.v?"#1a1a2e":"#fff",
-                  color:confidencial===op.v?"#fff":"#888",cursor:"pointer",fontFamily:"inherit"}}>
-                {op.l}
-              </button>
-            ))}
-          </div>
-          {!confidencial&&(
-            <input value={empresaNombre} onChange={e=>setEmpresaNombre(e.target.value)}
-              placeholder="Nombre de la empresa..."
-              style={{width:"100%",padding:"12px 14px",borderRadius:12,
-                border:"1.5px solid #e0e0ef",fontSize:14,outline:"none",
-                boxSizing:"border-box",fontFamily:"inherit"}}/>
-          )}
-          {confidencial&&(
-            <div style={{background:"#f8f8fc",borderRadius:10,padding:"10px 14px",
-              fontSize:12,color:"#888"}}>
-              El nombre de la empresa no será visible para los candidatos.
+          {esEmpresa ? (
+            // Para empresa: mostrar nombre del perfil + opción confidencial
+            <div>
+              <div style={{background:"#f8f8fc",borderRadius:12,padding:"12px 14px",
+                marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>
+                    {confidencial?"🔒 Empresa confidencial":(userData.empresa||"Mi Empresa")}
+                  </div>
+                  <div style={{fontSize:11,color:"#888",marginTop:2}}>Nombre de tu empresa en el perfil</div>
+                </div>
+                <button onClick={()=>setConfidencial(c=>!c)}
+                  style={{padding:"6px 12px",borderRadius:99,fontSize:12,fontWeight:700,
+                    border:confidencial?"2px solid #E63946":"1.5px solid #e0e0ef",
+                    background:confidencial?"#fdecea":"#fff",
+                    color:confidencial?"#E63946":"#888",cursor:"pointer",fontFamily:"inherit"}}>
+                  {confidencial?"🔒 Confidencial":"Marcar confidencial"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            // Para profesional: toggle + campo de texto
+            <div>
+              <div style={{display:"flex",gap:8,marginBottom:8}}>
+                {[{v:false,l:"🏢 Mostrar empresa"},{v:true,l:"🔒 Confidencial"}].map(op=>(
+                  <button key={String(op.v)}
+                    onClick={()=>{
+                      if(op.v) { setEmpresaNombre(""); setConfidencial(true); }
+                      else setConfidencial(false);
+                    }}
+                    style={{flex:1,padding:"9px",borderRadius:12,fontSize:12,fontWeight:700,
+                      border:confidencial===op.v?"2px solid #1a1a2e":"1.5px solid #e0e0ef",
+                      background:confidencial===op.v?"#1a1a2e":"#fff",
+                      color:confidencial===op.v?"#fff":"#888",cursor:"pointer",fontFamily:"inherit"}}>
+                    {op.l}
+                  </button>
+                ))}
+              </div>
+              {!confidencial&&(
+                <input value={empresaNombre} onChange={e=>setEmpresaNombre(e.target.value)}
+                  placeholder="Nombre de la empresa..."
+                  style={{width:"100%",padding:"12px 14px",borderRadius:12,
+                    border:"1.5px solid #e0e0ef",fontSize:14,outline:"none",
+                    boxSizing:"border-box",fontFamily:"inherit"}}/>
+              )}
+              {confidencial&&(
+                <div style={{background:"#f8f8fc",borderRadius:10,padding:"10px 14px",
+                  fontSize:12,color:"#888"}}>
+                  El nombre no será visible para los candidatos.
+                </div>
+              )}
             </div>
           )}
         </div>
