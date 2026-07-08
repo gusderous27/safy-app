@@ -3271,6 +3271,68 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
   const [seguro,  setSeguro]  = useState(init.seguro!==undefined?init.seguro:null);
   const [tipo,    setTipo]    = useState(init.tipo||"");
   const [urgente, setUrgente] = useState(init.urgente||false);
+
+  // Importador de link
+  const [showImport, setShowImport] = useState(false);
+  const [importUrl,  setImportUrl]  = useState("");
+  const [importing,  setImporting]  = useState(false);
+  const [importError,setImportError]= useState("");
+
+  const importarDesdeLink = async () => {
+    if(!importUrl.trim()) return;
+    setImporting(true);
+    setImportError("");
+    try {
+      const prompt = `Analizá este aviso de empleo y extraé la información en JSON.
+URL: ${importUrl}
+
+Devolvé SOLO un JSON válido con esta estructura (sin markdown, sin explicaciones):
+{
+  "titulo": "título del puesto o búsqueda",
+  "empresa": "nombre de la empresa",
+  "ciudad": "ciudad o localidad",
+  "tipo": "sector o tipo de industria",
+  "descripcion": "descripción completa del aviso",
+  "presupuesto": 0,
+  "moneda": "ARS",
+  "urgente": false
+}
+
+Si no podés acceder a la URL, inferí lo que podás del link mismo.`;
+
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const data = await r.json();
+      const text = data.content?.[0]?.text || "";
+      // Parsear JSON
+      const match = text.match(/\{[\s\S]*\}/);
+      if(!match) throw new Error("No se pudo extraer la información");
+      const info = JSON.parse(match[0]);
+      // Pre-completar campos
+      if(info.titulo)      setTitulo(info.titulo);
+      if(info.descripcion) setDesc(info.descripcion);
+      if(info.ciudad)      setCiudad(info.ciudad);
+      if(info.tipo)        setTipo(info.tipo);
+      if(info.presupuesto) setPres(info.presupuesto);
+      if(info.moneda)      setMoneda(info.moneda);
+      if(info.urgente)     setUrgente(info.urgente);
+      setShowImport(false);
+      setImportUrl("");
+      toast_("✓ Aviso importado correctamente");
+    } catch(e) {
+      console.error("Error importando:", e);
+      setImportError("No pudimos importar ese link. Completá los datos manualmente.");
+    }
+    setImporting(false);
+  };
+
   var ok = titulo && ciudad;
 
   const publicar = function(){
@@ -3339,6 +3401,52 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
             x
           </button>
         </div>
+
+        {/* Importar desde link — para empresas y profesionales */}
+        {!esEdicion&&(
+          <div style={{marginBottom:16}}>
+            {showImport ? (
+              <div style={{background:"#f0f0f8",borderRadius:14,padding:14}}>
+                <div style={{fontWeight:700,fontSize:13,color:"#1a1a2e",marginBottom:8}}>
+                  📎 Pegá el link del aviso
+                </div>
+                <div style={{fontSize:12,color:"#888",marginBottom:10}}>
+                  LinkedIn, Indeed, Computrabajo, ZonaJobs, etc.
+                </div>
+                <input value={importUrl} onChange={e=>setImportUrl(e.target.value)}
+                  placeholder="https://www.linkedin.com/jobs/..."
+                  style={{width:"100%",padding:"10px 12px",borderRadius:10,
+                    border:"1.5px solid #e0e0ef",fontSize:13,outline:"none",
+                    boxSizing:"border-box",marginBottom:8,fontFamily:"inherit"}}/>
+                {importError&&<div style={{fontSize:12,color:"#E63946",marginBottom:8}}>{importError}</div>}
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={importarDesdeLink} disabled={importing||!importUrl.trim()}
+                    style={{flex:1,padding:"10px",borderRadius:10,border:"none",
+                      background:importing?"#ccc":"#1a1a2e",color:"#fff",
+                      fontWeight:700,fontSize:13,cursor:importing?"not-allowed":"pointer",
+                      fontFamily:"inherit"}}>
+                    {importing?"Analizando con IA...":"✨ Importar"}
+                  </button>
+                  <button onClick={()=>{setShowImport(false);setImportUrl("");setImportError("");}}
+                    style={{padding:"10px 14px",borderRadius:10,border:"1.5px solid #e0e0ef",
+                      background:"#fff",color:"#888",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ):(
+              <button onClick={()=>setShowImport(true)}
+                style={{width:"100%",padding:"11px",borderRadius:12,
+                  border:"1.5px dashed #2A9D8F",background:"transparent",
+                  color:"#2A9D8F",fontWeight:600,fontSize:13,cursor:"pointer",
+                  fontFamily:"inherit",display:"flex",alignItems:"center",
+                  justifyContent:"center",gap:8}}>
+                📎 Importar desde LinkedIn, Indeed u otro portal
+              </button>
+            )}
+          </div>
+        )}
+
         {esEmpresa?(
           <>
             <Inp label="Puesto buscado *" placeholder="Ej: Tecnico SyH para obra en altura"
@@ -4371,7 +4479,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                     </div>
                   )}
                   <div style={{color:"#666",fontSize:14,marginTop:esEmpresa&&userData.contacto?2:0}}>
-                    {esEmpresa?userData.rubro||"Empresa":TITULOS[userData.titulo]||"Profesional"}
+                    {esEmpresa?userData.rubro||"Empresa":TITULOS[userData.titulo||userData.tituloSyH]||"Profesional"}
                   </div>
                   <div style={{fontSize:13,color:"#888",marginTop:2}}>
                     {[userData.ciudad,userData.provincia].filter(Boolean).join(", ")||"Sin ubicación"}
@@ -4388,10 +4496,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                   )}
                 </div>
               </div>
-              {(userData.descripcion||userData.descripcionObra)&&(
+              {(userData.perfil||userData.descripcion||userData.descripcionObra)&&(
                 <div style={{background:"#f8f8fc",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
                   <p style={{fontSize:13,color:"#444",lineHeight:1.55,margin:0}}>
-                    {userData.descripcion||userData.descripcionObra}
+                    {userData.perfil||userData.descripcion||userData.descripcionObra}
                   </p>
                 </div>
               )}
@@ -4406,7 +4514,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 </div>
               )}
               <div style={{borderTop:"1px solid #f0f0f0",paddingTop:14,
-                display:"flex",justifyContent:"space-between"}}>
+                display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
                 {!esEmpresa&&(
                   <div>
                     <div style={{fontSize:11,color:"#999",fontWeight:600}}>TARIFA / HORA</div>
@@ -4415,6 +4523,13 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                         ?(sym+Number(userData.tarifa||userData.presupuesto).toLocaleString()+"/h")
                         :"No indicado"}
                     </div>
+                    {userData.seguro!==undefined&&(
+                      <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:99,
+                        background:userData.seguro?"#e8f7f5":"#fdecea",
+                        color:userData.seguro?"#2A9D8F":"#E63946",display:"inline-block",marginTop:4}}>
+                        {userData.seguro?"✓ Con seguro":"✕ Sin seguro"}
+                      </span>
+                    )}
                   </div>
                 )}
                 <div style={{textAlign:esEmpresa?"left":"right"}}>
