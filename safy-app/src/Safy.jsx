@@ -2355,7 +2355,9 @@ const Onboarding = ({onComplete, googleData}) => {
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 
-const ChatWindow = ({match,userData,onClose}) => {
+const LIMITE_MSG_GRATIS = 5;
+
+const ChatWindow = ({match,userData,onClose,esPro,onSuscribir}) => {
   const chatKey = (match&&match.id) ? String(match.id) : "default";
   const initMsg = [{from:"them",text:"Hola, vi tu perfil en Safy. Me interesa tu experiencia. Podemos coordinar?",time:"10:32"}];
   const [historial,setHistorial] = useState({});
@@ -2365,11 +2367,18 @@ const ChatWindow = ({match,userData,onClose}) => {
     return {...h,[chatKey]:typeof fn==="function"?fn(prev):fn};
   });
   const [input,setInput] = useState("");
+  const [showLimite,setShowLimite] = useState(false);
   const myInit = userData.nombre
     ? (userData.nombre[0]+(userData.apellido||" ")[0]).toUpperCase()
     : (userData.empresa||"??").slice(0,2).toUpperCase();
+
+  // Contar solo mensajes enviados por mí
+  const misMsg = msgs.filter(m=>m.from==="me").length;
+  const llegóAlLimite = !esPro && misMsg >= LIMITE_MSG_GRATIS;
+
   const send = () => {
     if(!input.trim()) return;
+    if(llegóAlLimite) { setShowLimite(true); return; }
     const now = new Date();
     const t = now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
     setMsgs(m=>[...m,{from:"me",text:input.trim(),time:t}]);
@@ -2421,17 +2430,37 @@ const ChatWindow = ({match,userData,onClose}) => {
       </div>
       <div style={{background:"#fff",padding:"12px 14px",borderTop:"1px solid #ebebeb",
         display:"flex",gap:10,alignItems:"center",flexShrink:0}}>
-        <input value={input} onChange={e=>setInput(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&send()}
-          placeholder="Escribí un mensaje..."
-          style={{flex:1,padding:"11px 14px",borderRadius:99,border:"1.5px solid #e0e0ef",
-            fontSize:14,outline:"none",background:"#f8f8fc"}}/>
-        <button onClick={send}
-          style={{width:42,height:42,borderRadius:"50%",background:"#1a1a2e",border:"none",
-            color:"#fff",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",
-            justifyContent:"center",fontFamily:"inherit"}}>
-          ›
-        </button>
+        {llegóAlLimite ? (
+          <div style={{flex:1,background:"#fffbf3",border:"1.5px solid #F4A261",
+            borderRadius:14,padding:"10px 14px",textAlign:"center"}}>
+            <div style={{fontSize:12,color:"#c97e1a",fontWeight:700,marginBottom:6}}>
+              🔒 Límite de {LIMITE_MSG_GRATIS} mensajes gratis alcanzado
+            </div>
+            <button onClick={()=>{onClose();onSuscribir&&onSuscribir();}}
+              style={{background:"linear-gradient(135deg,#F4A261,#e8853d)",border:"none",
+                borderRadius:99,padding:"6px 16px",fontSize:12,fontWeight:800,
+                color:"#1a1a2e",cursor:"pointer",fontFamily:"inherit"}}>
+              ⭐ Suscribirme para continuar
+            </button>
+          </div>
+        ) : (
+          <>
+            {!esPro&&<div style={{fontSize:10,color:"#aaa",position:"absolute",top:-16,left:14}}>
+              {LIMITE_MSG_GRATIS - misMsg} mensajes gratis restantes
+            </div>}
+            <input value={input} onChange={e=>setInput(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&send()}
+              placeholder="Escribí un mensaje..."
+              style={{flex:1,padding:"11px 14px",borderRadius:99,border:"1.5px solid #e0e0ef",
+                fontSize:14,outline:"none",background:"#f8f8fc"}}/>
+            <button onClick={send}
+              style={{width:42,height:42,borderRadius:"50%",background:"#1a1a2e",border:"none",
+                color:"#fff",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",
+                justifyContent:"center",fontFamily:"inherit"}}>
+              ›
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -2995,8 +3024,15 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
         </div>
       )}
       <div style={{background:"#fff",borderRadius:20,overflow:"hidden",
-        boxShadow:isTop?"0 8px 40px rgba(0,0,0,0.18)":"0 4px 16px rgba(0,0,0,0.08)"}}>
-        <div style={{height:8,background:p.color}}/>
+        boxShadow:isTop?"0 8px 40px rgba(0,0,0,0.18)":"0 4px 16px rgba(0,0,0,0.08)",
+        border:p.esPro?"2px solid #F4A261":"none"}}>
+        {p.esPro&&(
+          <div style={{background:"linear-gradient(135deg,#F4A261,#e8853d)",
+            padding:"4px 12px",display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:11,fontWeight:800,color:"#1a1a2e"}}>⭐ PRO VERIFICADO</span>
+          </div>
+        )}
+        <div style={{height:p.esPro?4:8,background:p.color}}/>
         <div style={{padding:"20px 20px 16px"}}>
           <div style={{display:"flex",gap:14,marginBottom:14}}>
             <Av init={p.avatar} color={p.color} size={60} foto={p.foto||""}/>
@@ -3615,7 +3651,12 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     ...obras,
   ];
 
-  const profesionalesFiltrados = todosLosProfesionales;
+  // Ordenar: Pro verificados primero, luego el resto
+  const profesionalesFiltrados = [...todosLosProfesionales].sort((a,b)=>{
+    if(a.esPro && !b.esPro) return -1;
+    if(!a.esPro && b.esPro) return 1;
+    return 0;
+  });
   const items = vista==="profesional"?profesionalesFiltrados:todasLasEmpresas;
   const remaining = items.slice(idx);
   const toast_ = (msg,color) => {
@@ -3662,7 +3703,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#f0f0f8",
       minHeight:"100vh",display:"flex",flexDirection:"column",maxWidth:420,margin:"0 auto"}}>
       <style>{CSS}</style>
-      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)}/>}
+      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)} esPro={esPro} onSuscribir={()=>setShowSub(true)}/>}
       {perfilViendo&&(
         <PerfilCompleto persona={perfilViendo} onClose={()=>setPerfilViendo(null)}
           onChat={()=>{setChatWith(perfilViendo);setPerfilViendo(null);}}
@@ -3813,13 +3854,43 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       {showTour&&<TourContextual rol={userRol} tabActual={tab} setTab={setTab} onFin={()=>{setShowTour(false);try{localStorage.setItem("safy_tour_done","1");}catch(e){}}}/>}
       {showSub&&<PantallaSubscripcion rol={userRol} onClose={()=>setShowSub(false)} authData={authData} onSubscribed={sub=>setSuscripcion(sub)}/>}
       {editando&&<EditarCuenta userData={userData} userRol={userRol}
-        onSave={d=>{setUserData(d);setEditando(false);toast_("Perfil actualizado");}}
+        onSave={async d=>{
+          setUserData(d);
+          setEditando(false);
+          toast_("Perfil actualizado ✓");
+          // Guardar en Supabase
+          if(authData?.token && authData?.user?.id) {
+            try {
+              await supa.upsertProfile(authData.token, {
+                id: authData.user.id,
+                rol: userRol,
+                email: d.email || authData.email,
+                nombre: d.nombre || null,
+                apellido: d.apellido || null,
+                empresa: d.empresa || null,
+                tel: d.tel || null,
+                pais: d.pais || null,
+                provincia: d.provincia || null,
+                ciudad: d.ciudad || null,
+                titulo: d.titulo || null,
+                tarifa: d.tarifa ? Number(d.tarifa) : null,
+                moneda: d.moneda || "ARS",
+                skills: d.skills || [],
+                perfil: d.perfil || null,
+                disponible: d.disponibilidad === "disponible" || d.disponible === true,
+                seguro: d.seguro || false,
+                foto: d.foto || null,
+                radio: Number(d.radio) || 30,
+              });
+            } catch(e) { console.error("Error guardando perfil:", e); }
+          }
+        }}
         onClose={()=>setEditando(false)}
         onLogout={onLogout}
         verificado={verificado}
         onVerificar={()=>{setEditando(false);setShowSusc(true);}}
         onCancelarVerif={()=>setVerificado(false)}/>}
-      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)}/>}
+      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)} esPro={esPro} onSuscribir={()=>setShowSub(true)}/>}
       {perfilViendo&&(
         <PerfilCompleto persona={perfilViendo} onClose={()=>setPerfilViendo(null)}
           onChat={()=>{setChatWith(perfilViendo);setPerfilViendo(null);}}
