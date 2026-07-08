@@ -189,7 +189,39 @@ const supa = {
     });
   },
 
-  async getSubscription(token, userId) {
+  async uploadFoto(token, userId, base64) {
+    try {
+      // Convertir base64 a blob
+      const arr = base64.split(",");
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while(n--) u8arr[n] = bstr.charCodeAt(n);
+      const blob = new Blob([u8arr], {type: mime});
+      const ext = mime.split("/")[1] || "jpg";
+      const path = userId + "/avatar." + ext;
+      const r = await fetch(SUPA_URL + "/storage/v1/object/avatars/" + path, {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + token,
+          "apikey": SUPA_KEY,
+          "Content-Type": mime,
+          "x-upsert": "true",
+        },
+        body: blob,
+      });
+      if(!r.ok) {
+        const e = await r.text();
+        console.error("Error subiendo foto:", e);
+        return null;
+      }
+      return SUPA_URL + "/storage/v1/object/public/avatars/" + path;
+    } catch(e) {
+      console.error("Error uploadFoto:", e);
+      return null;
+    }
+  },
     const r = await fetch(SUPA_URL + "/rest/v1/subscriptions?user_id=eq." + userId + "&estado=eq.activa&select=*&order=created_at.desc&limit=1", {
       headers: { ...this.headers, "Authorization": "Bearer " + token }
     });
@@ -2979,7 +3011,9 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
   const [dx,setDx] = useState(0);
   const [dragging,setDragging] = useState(false);
   const [dec,setDec] = useState(null);
+  const [saliendo,setSaliendo] = useState(null); // 'yes' o 'no'
   const sx = useRef(null);
+
   const start = cx => { if(!isTop)return; sx.current=cx; setDragging(true); };
   const move  = cx => {
     if(!dragging||!sx.current)return;
@@ -2988,9 +3022,17 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
   };
   const end = () => {
     if(!dragging)return;
-    if(dx>80)onSwipe("yes"); else if(dx<-80)onSwipe("no");
-    else{setDx(0);setDec(null);}
-    setDragging(false); sx.current=null;
+    setDragging(false);
+    sx.current=null;
+    if(dx>80){
+      setSaliendo("yes");
+      setTimeout(()=>{ setDx(0); setDec(null); setSaliendo(null); onSwipe("yes"); },250);
+    } else if(dx<-80){
+      setSaliendo("no");
+      setTimeout(()=>{ setDx(0); setDec(null); setSaliendo(null); onSwipe("no"); },250);
+    } else {
+      setDx(0); setDec(null);
+    }
   };
   const isPro = type==="profesional";
   const p = item;
@@ -3002,8 +3044,9 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
       onTouchStart={e=>start(e.touches[0].clientX)}
       onTouchMove={e=>move(e.touches[0].clientX)} onTouchEnd={end}
       style={{position:"relative",width:"100%",userSelect:"none",touchAction:"none",
-        transform:"translateX("+dx+"px) rotate("+(dx/18)+"deg)",
-        transition:dragging?"none":"transform .3s ease",
+        transform:"translateX("+(saliendo==="yes"?500:saliendo==="no"?-500:dx)+"px) rotate("+(saliendo==="yes"?30:saliendo==="no"?-30:dx/18)+"deg)",
+        transition:dragging?"none":"transform .25s ease",
+        opacity:saliendo?0:1,
         cursor:isTop?"grab":"default"}}>
       {dec==="yes"&&(
         <div style={{position:"absolute",top:24,left:24,zIndex:10,padding:"8px 20px",
@@ -4167,15 +4210,21 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           setUserData(d);
           setEditando(false);
           toast_("Perfil actualizado ✓");
-          // Guardar en Supabase
           if(authData?.token && authData?.user?.id) {
             try {
-              // Comprimir foto si es base64 muy larga
-              let fotoGuardar = d.foto || null;
-              if(fotoGuardar && fotoGuardar.length > 50000) {
-                // Foto muy grande, no guardar en Supabase por ahora
-                fotoGuardar = null;
-                toast_("Foto guardada localmente (tamaño grande)");
+              let fotoUrl = d.foto || null;
+              // Si la foto es base64, subirla a Storage
+              if(fotoUrl && fotoUrl.startsWith("data:")) {
+                toast_("Subiendo foto...");
+                const url = await supa.uploadFoto(authData.token, authData.user.id, fotoUrl);
+                if(url) {
+                  fotoUrl = url;
+                  setUserData(prev=>({...prev, foto: url}));
+                  toast_("Foto guardada ✓");
+                } else {
+                  fotoUrl = null;
+                  toast_("No se pudo guardar la foto");
+                }
               }
               await supa.upsertProfile(authData.token, {
                 id: authData.user.id,
@@ -4197,7 +4246,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 disponibilidad: d.disponibilidad || null,
                 horario: d.horario || null,
                 seguro: d.seguro !== undefined ? d.seguro : false,
-                foto: fotoGuardar,
+                foto: fotoUrl,
                 radio: Number(d.radio) || 30,
               });
             } catch(e) { console.error("Error guardando perfil:", e); }
