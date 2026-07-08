@@ -2900,7 +2900,20 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onVer
               <Inp label="Apellido" value={d.apellido||""} onChange={v=>upd("apellido",v)} placeholder="Tu apellido"/>
               <Inp label="Email" type="email" value={d.email||""} onChange={v=>upd("email",v)} placeholder="tu@email.com"/>
               <Inp label="Teléfono" optional value={d.tel||""} onChange={v=>upd("tel",v)} placeholder="+54 9 11..."/>
-              <Inp label="Radio (km)" optional type="number" value={d.radio||""} onChange={v=>upd("radio",v)} placeholder="Ej: 30"/>
+              {/* Radio con slider */}
+              <div style={{marginBottom:18}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>Radio de trabajo</label>
+                  <span style={{fontSize:14,fontWeight:800,color:"#1a1a2e",background:"#f0f0f8",
+                    padding:"3px 10px",borderRadius:99}}>{d.radio||30} km</span>
+                </div>
+                <input type="range" min={5} max={200} step={5}
+                  value={d.radio||30} onChange={e=>upd("radio",Number(e.target.value))}
+                  style={{width:"100%",accentColor:"#1a1a2e"}}/>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#aaa",marginTop:4}}>
+                  <span>5 km</span><span>100 km</span><span>200 km</span>
+                </div>
+              </div>
             </>
           ):(
             <>
@@ -3137,9 +3150,34 @@ const FeedItem = ({obra,onPostular,yaPostulado}) => {
           </div>
         </div>
         <p style={{fontSize:13,color:"#444",lineHeight:1.5,margin:"0 0 10px"}}>{obra.descripcion}</p>
-        <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}}>
-          {obra.requisitos.map((r,i)=><Chip key={i}>{r}</Chip>)}
+        <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:10}}>
+          {(obra.requisitos||[]).map((r,i)=><Chip key={i}>{r}</Chip>)}
+          {obra.modalidad&&(
+            <Chip color="#7B2D8B">
+              {obra.modalidad==="presencial"?"🏢 Presencial":obra.modalidad==="remoto"?"🏠 Remoto":"🔄 Híbrido"}
+            </Chip>
+          )}
         </div>
+        {/* Portales donde aparece */}
+        {(obra.portales||[]).length>0&&(
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:11,color:"#aaa",fontWeight:600,marginBottom:4}}>También en:</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+              {obra.portales.map((p,i)=>(
+                <span key={i} style={{fontSize:11,background:"#f0f0f8",color:"#666",
+                  padding:"2px 8px",borderRadius:99,fontWeight:600}}>{p}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Link externo de postulación */}
+        {obra.linkPostulacion&&(
+          <a href={obra.linkPostulacion} target="_blank" rel="noopener noreferrer"
+            style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#1a73e8",
+              fontWeight:600,marginBottom:10,textDecoration:"none"}}>
+            🔗 Postulate en el portal externo ↗
+          </a>
+        )}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <span style={{fontSize:20,fontWeight:800,color:"#1a1a2e"}}>{sym}{obra.presupuesto.toLocaleString()}</span>
@@ -3273,6 +3311,34 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
   const [urgente, setUrgente] = useState(init.urgente||false);
   const [modalidad,setModalidad] = useState(init.modalidad||"presencial");
   const [requisitos,setRequisitos] = useState(init.requisitos||[]);
+  const [portales, setPortales] = useState(init.portales||[]);
+  const [linkPostulacion, setLinkPostulacion] = useState(init.linkPostulacion||"");
+
+  const PORTALES_EMPLEO = [
+    // LATAM
+    {v:"computrabajo", l:"Computrabajo", paises:"AR/MX/CO/PE/CL"},
+    {v:"zonajobs",     l:"ZonaJobs",     paises:"AR"},
+    {v:"bumeran",      l:"BumerAN",      paises:"AR/MX/VE"},
+    {v:"linkedin",     l:"LinkedIn",     paises:"Global"},
+    {v:"indeed",       l:"Indeed",       paises:"Global"},
+    {v:"glassdoor",    l:"Glassdoor",    paises:"Global"},
+    {v:"getwork",      l:"Get on Board", paises:"LATAM"},
+    {v:"trabajando",   l:"Trabajando.com",paises:"AR/CL/CO"},
+    {v:"multitrabajos",l:"Multitrabajos",paises:"AR/PE/EC"},
+    {v:"occmundial",   l:"OCC Mundial",  paises:"MX"},
+    {v:"occ",          l:"OCCMundial",   paises:"MX"},
+    {v:"elempleo",     l:"El Empleo",    paises:"CO"},
+    {v:"aptitus",      l:"Aptitus",      paises:"PE"},
+    // España
+    {v:"infojobs",     l:"InfoJobs",     paises:"ES"},
+    {v:"tecnoempleo",  l:"TecnoEmpleo",  paises:"ES"},
+    {v:"trabajos",     l:"Trabajos.com", paises:"ES"},
+    {v:"milanuncios",  l:"Milanuncios",  paises:"ES"},
+    // USA
+    {v:"ziprecruiter", l:"ZipRecruiter", paises:"USA"},
+    {v:"monster",      l:"Monster",      paises:"USA/Global"},
+    {v:"careerbuilder",l:"CareerBuilder",paises:"USA"},
+  ];
 
   // Importador de link
   const [showImport, setShowImport] = useState(false);
@@ -3337,7 +3403,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
         empresa:empNombre,tipo:tipo||"Busqueda",ciudad:ciudad,distancia:5,
         presupuesto:Number(pres)||0,moneda:moneda,duracion:"A convenir",urgente:urgente,
         descripcion:desc||titulo,requisitos:requisitos.length?requisitos:[titulo],
-        modalidad:modalidad,
+        modalidad:modalidad, portales:portales, linkPostulacion:linkPostulacion,
         avatar:empInit,
         color:busquedaEditar?busquedaEditar.color:"#2A9D8F",
         email:userData.email||"",tel:userData.tel||"",seguro:seguro,
@@ -3397,74 +3463,13 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
 
         {/* Importar desde link — para empresas y profesionales */}
         {!esEdicion&&(
-          <div style={{marginBottom:16}}>
-            {showImport ? (
-              <div style={{background:"#f0f0f8",borderRadius:14,padding:14}}>
-                <div style={{fontWeight:700,fontSize:13,color:"#1a1a2e",marginBottom:8}}>
-                  ✨ Importar aviso con IA
-                </div>
-                {/* Toggle URL / Texto */}
-                <div style={{display:"flex",gap:6,marginBottom:10}}>
-                  {[{v:"url",l:"🔗 Pegar link"},{v:"texto",l:"📋 Pegar texto"}].map(m=>(
-                    <button key={m.v} onClick={()=>setImportMode(m.v)}
-                      style={{flex:1,padding:"7px",borderRadius:10,fontSize:12,fontWeight:700,
-                        border:importMode===m.v?"2px solid #1a1a2e":"2px solid #e0e0ef",
-                        background:importMode===m.v?"#1a1a2e":"#fff",
-                        color:importMode===m.v?"#fff":"#888",cursor:"pointer",fontFamily:"inherit"}}>
-                      {m.l}
-                    </button>
-                  ))}
-                </div>
-                {importMode==="url" ? (
-                  <>
-                    <div style={{fontSize:12,color:"#888",marginBottom:6}}>
-                      LinkedIn, Indeed, ZonaJobs, BumerAN...
-                    </div>
-                    <input value={importUrl} onChange={e=>setImportUrl(e.target.value)}
-                      placeholder="https://www.linkedin.com/jobs/..."
-                      style={{width:"100%",padding:"10px 12px",borderRadius:10,
-                        border:"1.5px solid #e0e0ef",fontSize:13,outline:"none",
-                        boxSizing:"border-box",marginBottom:6,fontFamily:"inherit"}}/>
-                  </>
-                ) : (
-                  <>
-                    <div style={{fontSize:12,color:"#888",marginBottom:6}}>
-                      Copiá el texto del aviso de Computrabajo u otro portal y pegalo acá
-                    </div>
-                    <textarea value={importTexto} onChange={e=>setImportTexto(e.target.value)}
-                      rows={5} placeholder="Pegá aquí el texto completo del aviso..."
-                      style={{width:"100%",padding:"10px 12px",borderRadius:10,
-                        border:"1.5px solid #e0e0ef",fontSize:13,outline:"none",
-                        boxSizing:"border-box",marginBottom:6,fontFamily:"inherit",resize:"vertical"}}/>
-                  </>
-                )}
-                {importError&&<div style={{fontSize:12,color:"#E63946",marginBottom:8}}>{importError}</div>}
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={importarDesdeLink}
-                    disabled={importing||(importMode==="url"?!importUrl.trim():!importTexto.trim())}
-                    style={{flex:1,padding:"10px",borderRadius:10,border:"none",
-                      background:importing?"#ccc":"#1a1a2e",color:"#fff",
-                      fontWeight:700,fontSize:13,cursor:importing?"not-allowed":"pointer",
-                      fontFamily:"inherit"}}>
-                    {importing?"Analizando...":"✨ Importar con IA"}
-                  </button>
-                  <button onClick={()=>{setShowImport(false);setImportUrl("");setImportTexto("");setImportError("");}}
-                    style={{padding:"10px 14px",borderRadius:10,border:"1.5px solid #e0e0ef",
-                      background:"#fff",color:"#888",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            ):(
-              <button onClick={()=>setShowImport(true)}
-                style={{width:"100%",padding:"11px",borderRadius:12,
-                  border:"1.5px dashed #2A9D8F",background:"transparent",
-                  color:"#2A9D8F",fontWeight:600,fontSize:13,cursor:"pointer",
-                  fontFamily:"inherit",display:"flex",alignItems:"center",
-                  justifyContent:"center",gap:8}}>
-                ✨ Importar desde LinkedIn, Computrabajo u otro portal
-              </button>
-            )}
+          <div style={{background:"#f0fdf4",borderRadius:12,padding:"10px 14px",
+            marginBottom:14,border:"1.5px solid #86efac",display:"flex",gap:8,alignItems:"flex-start"}}>
+            <span style={{fontSize:16,flexShrink:0}}>💡</span>
+            <div style={{fontSize:12,color:"#15803d",lineHeight:1.5}}>
+              <strong>Tip:</strong> Copiá el título y descripción del aviso desde LinkedIn, 
+              Computrabajo u otro portal y pegalo en los campos de abajo.
+            </div>
           </div>
         )}
 
@@ -3533,6 +3538,39 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
           </div>
         </div>
         <Honorarios value={pres} moneda={moneda} onValue={setPres} onMoneda={setMoneda}/>
+
+        {/* Portales donde aparece */}
+        <div style={{marginBottom:18}}>
+          <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:4}}>
+            Este aviso también aparece en
+          </label>
+          <div style={{fontSize:12,color:"#888",marginBottom:10}}>
+            Opcional — seleccioná los portales donde publicaste
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {PORTALES_EMPLEO.map(p=>(
+              <button key={p.v}
+                onClick={()=>setPortales(prev=>
+                  prev.includes(p.v)?prev.filter(x=>x!==p.v):[...prev,p.v]
+                )}
+                style={{padding:"5px 11px",borderRadius:99,fontSize:12,fontWeight:600,
+                  border:portales.includes(p.v)?"2px solid #1a1a2e":"1.5px solid #e0e0ef",
+                  background:portales.includes(p.v)?"#1a1a2e":"#fff",
+                  color:portales.includes(p.v)?"#fff":"#666",
+                  cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",
+                  alignItems:"center",gap:1}}>
+                <span>{p.l}</span>
+                <span style={{fontSize:9,opacity:.6}}>{p.paises}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Link de postulación */}
+        <Inp label="Postulate en este link" optional
+          placeholder="https://www.linkedin.com/jobs/view/..."
+          hint="Si querés que los candidatos postulen en otro portal"
+          value={linkPostulacion} onChange={setLinkPostulacion}/>
         {esEmpresa&&(
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
             background:"#f8f8fc",borderRadius:12,padding:"12px 14px",marginBottom:18}}>
@@ -4532,41 +4570,63 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           <div style={{padding:"0 12px"}}>
             <div style={{background:"#fff",borderRadius:16,padding:20,
               boxShadow:"0 2px 12px rgba(0,0,0,0.08)",marginBottom:14}}>
+              {/* Foto + nombre */}
               <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:16}}>
                 <Av init={uInit} color="#1a1a2e" size={70} foto={userData.foto||""}/>
                 <div style={{flex:1}}>
-                  {/* Nombre principal */}
                   <div style={{fontWeight:800,fontSize:18,color:"#1a1a2e",
                     display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     {esEmpresa
                       ? (userData.empresa||userData.nombre||"Mi Empresa")
                       : (userData.nombre?(userData.nombre+" "+(userData.apellido||"")).trim():"Profesional")}
                     {verificado&&<BadgeVerificado size={18}/>}
+                    {esPro&&<span style={{fontSize:11,fontWeight:800,background:"linear-gradient(135deg,#F4A261,#e8853d)",color:"#1a1a2e",padding:"2px 8px",borderRadius:99}}>⭐ PRO</span>}
                   </div>
-                  {/* Para empresa: contacto debajo del nombre */}
-                  {esEmpresa&&userData.contacto&&(
-                    <div style={{fontSize:13,color:"#666",marginTop:2,fontWeight:500}}>
-                      Contacto: {userData.contacto}
+                  {/* Título */}
+                  {!esEmpresa&&(userData.titulo||userData.tituloSyH)&&(
+                    <div style={{color:"#1a1a2e",fontSize:14,fontWeight:600,marginTop:2}}>
+                      {TITULOS[userData.titulo||userData.tituloSyH]||"Profesional"}
                     </div>
                   )}
-                  <div style={{color:"#666",fontSize:14,marginTop:esEmpresa&&userData.contacto?2:0}}>
-                    {esEmpresa?userData.rubro||"Empresa":TITULOS[userData.titulo||userData.tituloSyH]||"Profesional"}
-                  </div>
+                  {esEmpresa&&userData.contacto&&(
+                    <div style={{fontSize:13,color:"#666",marginTop:2}}>Contacto: {userData.contacto}</div>
+                  )}
+                  {esEmpresa&&(
+                    <div style={{color:"#666",fontSize:13,marginTop:2}}>{userData.rubro||"Empresa"}</div>
+                  )}
                   <div style={{fontSize:13,color:"#888",marginTop:2}}>
                     {[userData.ciudad,userData.provincia].filter(Boolean).join(", ")||"Sin ubicación"}
                   </div>
-                  {!esEmpresa&&userData.disponibilidad&&(
-                    <div style={{marginTop:6}}>
-                      <span style={{
-                        background:(DC[userData.disponibilidad]||"#999")+"22",
-                        color:DC[userData.disponibilidad]||"#999",
-                        padding:"3px 12px",borderRadius:99,fontSize:12,fontWeight:700}}>
-                        {DL[userData.disponibilidad]||""}
-                      </span>
+                  {/* Disponibilidad */}
+                  {!esEmpresa&&(
+                    <div style={{marginTop:6,display:"flex",flexWrap:"wrap",gap:6}}>
+                      {userData.disponibilidad&&(
+                        <span style={{background:(DC[userData.disponibilidad]||"#999")+"22",
+                          color:DC[userData.disponibilidad]||"#999",
+                          padding:"3px 10px",borderRadius:99,fontSize:12,fontWeight:700}}>
+                          {DL[userData.disponibilidad]||"Disponible"}
+                        </span>
+                      )}
+                      {!userData.disponibilidad&&userData.disponible!==undefined&&(
+                        <span style={{background:userData.disponible?"#e8f7f5":"#fdecea",
+                          color:userData.disponible?"#2A9D8F":"#E63946",
+                          padding:"3px 10px",borderRadius:99,fontSize:12,fontWeight:700}}>
+                          {userData.disponible?"Disponible":"No disponible"}
+                        </span>
+                      )}
+                      {userData.seguro!==undefined&&userData.seguro!==null&&(
+                        <span style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:99,
+                          background:userData.seguro?"#e8f7f5":"#fdecea",
+                          color:userData.seguro?"#2A9D8F":"#E63946"}}>
+                          {userData.seguro?"✓ Con seguro":"✕ Sin seguro"}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Descripción */}
               {(userData.perfil||userData.descripcion||userData.descripcionObra)&&(
                 <div style={{background:"#f8f8fc",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
                   <p style={{fontSize:13,color:"#444",lineHeight:1.55,margin:0}}>
@@ -4574,18 +4634,36 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                   </p>
                 </div>
               )}
+
+              {/* Skills */}
               {(userData.skills||[]).length>0&&(
                 <div style={{marginBottom:14}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#999",marginBottom:8,textTransform:"uppercase"}}>
-                    Skills
-                  </div>
+                  <div style={{fontSize:11,fontWeight:700,color:"#999",marginBottom:8,textTransform:"uppercase"}}>Skills</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                     {userData.skills.map((s,i)=><Chip key={i}>{s}</Chip>)}
                   </div>
                 </div>
               )}
+
+              {/* Horario */}
+              {!esEmpresa&&userData.horario&&(
+                <div style={{marginBottom:14,display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:14}}>🕐</span>
+                  <span style={{fontSize:13,color:"#555"}}>{userData.horario}</span>
+                </div>
+              )}
+
+              {/* Radio */}
+              {!esEmpresa&&userData.radio&&(
+                <div style={{marginBottom:14,display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:14}}>📍</span>
+                  <span style={{fontSize:13,color:"#555"}}>Radio de trabajo: <strong>{userData.radio} km</strong></span>
+                </div>
+              )}
+
+              {/* Tarifa + conexiones */}
               <div style={{borderTop:"1px solid #f0f0f0",paddingTop:14,
-                display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
+                display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 {!esEmpresa&&(
                   <div>
                     <div style={{fontSize:11,color:"#999",fontWeight:600}}>TARIFA / HORA</div>
@@ -4594,13 +4672,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                         ?(sym+Number(userData.tarifa||userData.presupuesto).toLocaleString()+"/h")
                         :"No indicado"}
                     </div>
-                    {userData.seguro!==undefined&&(
-                      <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:99,
-                        background:userData.seguro?"#e8f7f5":"#fdecea",
-                        color:userData.seguro?"#2A9D8F":"#E63946",display:"inline-block",marginTop:4}}>
-                        {userData.seguro?"✓ Con seguro":"✕ Sin seguro"}
-                      </span>
-                    )}
+                    <div style={{fontSize:11,color:"#888",marginTop:2}}>{userData.moneda||"ARS"}</div>
                   </div>
                 )}
                 <div style={{textAlign:esEmpresa?"left":"right"}}>
