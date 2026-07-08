@@ -1098,40 +1098,16 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
     window.location.href = url;
   };
 
-  const handleMP = async () => {
-    setLoading(true);
-    try {
-      // Crear preferencia de pago en MercadoPago via backend
-      const r = await fetch("https://api.mercadopago.com/preapproval", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer APP_USR-1118779140338502-070816-36a8be5a40fd6e1de513100ba5bf6d7f-92004436",
-        },
-        body: JSON.stringify({
-          reason: "SafyJobs " + (rol === "profesional" ? "Pro" : "Empresa") + " - " + periodo,
-          auto_recurring: {
-            frequency: periodo === "mensual" ? 1 : 12,
-            frequency_type: "months",
-            transaction_amount: plan.precio,
-            currency_id: "ARS",
-          },
-          back_url: window.location.origin + "?sub=ok&plan=" + planKey,
-          payer_email: authData?.email,
-          status: "pending",
-        }),
-      });
-      const data = await r.json();
-      if(data.init_point) {
-        window.location.href = data.init_point;
-      } else {
-        throw new Error("No se pudo crear la suscripción");
-      }
-    } catch(e) {
-      console.error("Error MP:", e);
-      alert("Error al procesar el pago. Intentá con tarjeta internacional.");
-    }
-    setLoading(false);
+  const handleMP = () => {
+    // Links de suscripción de MercadoPago
+    const MP_LINKS = {
+      profesional_mensual: "https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=2c9380849628a2a80196423d5e030230",
+      profesional_anual:   "https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=2c9380849628a2a80196423d5e030230",
+      empresa_mensual:     "https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=2c9380849628a2a80196423d5e030230",
+      empresa_anual:       "https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=2c9380849628a2a80196423d5e030230",
+    };
+    // TODO: reemplazar con links reales de MercadoPago una vez creados
+    alert("Para pagar con MercadoPago, por favor usá la opción de tarjeta internacional por ahora. Estamos configurando MercadoPago.");
   };
 
   return (
@@ -2911,6 +2887,38 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onVer
         </div>
         {esPro&&(
           <div style={{background:"#fff",borderRadius:16,padding:18,marginBottom:16,boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
+            <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>Perfil profesional</div>
+            <Sel label="Título en SyH" value={d.titulo||""}
+              onChange={v=>upd("titulo",v)}
+              options={[
+                {v:"",l:"Seleccioná tu título..."},
+                {v:"no_aplica",l:"No aplica"},
+                {v:"est_syh",l:"Estudiante en Seguridad y Salud"},
+                {v:"tec_syh",l:"Técnico en Seguridad y Salud"},
+                {v:"aud_syh",l:"Auditor en Seguridad y Salud"},
+                {v:"lic_syh",l:"Licenciado en Seguridad y Salud"},
+                {v:"ing_syh",l:"Ingeniero en Seguridad y Salud"},
+              ]}/>
+            <Sel label="Título en Medio Ambiente" optional value={d.tituloMA||""}
+              onChange={v=>upd("tituloMA",v)}
+              options={[
+                {v:"",l:"Sin título en MA (opcional)"},
+                {v:"no_aplica",l:"No aplica"},
+                {v:"tec_ma",l:"Técnico en Medio Ambiente"},
+                {v:"aud_ma",l:"Auditor Ambiental"},
+                {v:"gest_ma",l:"Gestor Ambiental"},
+                {v:"lic_ma",l:"Licenciado en Ciencias Ambientales"},
+                {v:"ing_ma",l:"Ingeniero Ambiental"},
+              ]}/>
+            <Txt label="Descripción breve" optional value={d.perfil||""}
+              onChange={v=>upd("perfil",v)}
+              hint="Resumí tu experiencia en 2-3 oraciones"/>
+            <SkillSelector label="Skills" selected={d.skills||[]} onChange={v=>upd("skills",v)}/>
+            <ToggleSeguro pais={d.pais||"AR"} value={d.seguro} onChange={v=>upd("seguro",v)}/>
+          </div>
+        )}
+        {esPro&&(
+          <div style={{background:"#fff",borderRadius:16,padding:18,marginBottom:16,boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
             <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>Honorarios</div>
             <Honorarios value={d.tarifa||""} moneda={d.moneda||"ARS"}
               onValue={v=>upd("tarifa",v)} onMoneda={v=>upd("moneda",v)}/>
@@ -3047,9 +3055,18 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
               </span>
               <span style={{fontSize:13,color:"#888",marginLeft:4}}>/h · {p.moneda}</span>
             </div>
-            {isPro&&p.trabajos&&(
-              <span style={{fontSize:12,color:"#888"}}>{p.trabajos} trabajos</span>
-            )}
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {p.seguro!==undefined&&(
+                <span style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:99,
+                  background:p.seguro?"#e8f7f5":"#fdecea",
+                  color:p.seguro?"#2A9D8F":"#E63946"}}>
+                  {p.seguro?"✓ Con seguro":"✕ Sin seguro"}
+                </span>
+              )}
+              {isPro&&p.trabajos&&(
+                <span style={{fontSize:12,color:"#888"}}>{p.trabajos} trabajos</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
