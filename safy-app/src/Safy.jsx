@@ -1734,7 +1734,13 @@ const StepPro2 = ({data,set,onNext}) => {
       {v:"osha30_ind", l:"OSHA 30 — Industria General"},
       {v:"iso45001",   l:"Especialista ISO 45001"},
     ] : []),
-  ];
+  ].sort((a,b) => {
+    if(!a.v) return -1; // "Seleccioná..." siempre primero
+    if(!b.v) return 1;
+    if(a.v==="no_aplica") return -1; // "No aplica" segundo
+    if(b.v==="no_aplica") return 1;
+    return a.l.length - b.l.length; // resto por longitud
+  });
   const opsMA = [
     {v:"",          l:"Sin título en Medio Ambiente (opcional)"},
     {v:"no_aplica", l:"No aplica"},
@@ -1744,7 +1750,13 @@ const StepPro2 = ({data,set,onNext}) => {
     {v:"gest_ma",   l:"Gestor Ambiental"},
     {v:"lic_ma",    l:"Licenciado en Ciencias Ambientales"},
     {v:"ing_ma",    l:"Ingeniero Ambiental"},
-  ];
+  ].sort((a,b) => {
+    if(!a.v) return -1;
+    if(!b.v) return 1;
+    if(a.v==="no_aplica") return -1;
+    if(b.v==="no_aplica") return 1;
+    return a.l.length - b.l.length;
+  });
   const next = () => { set({...data,titulo:tit,tituloMA:titMA,experiencia:exp,descripcion:desc}); onNext(); };
   return (
     <div style={{padding:"24px 20px 32px"}}>
