@@ -3271,34 +3271,26 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
   const [seguro,  setSeguro]  = useState(init.seguro!==undefined?init.seguro:null);
   const [tipo,    setTipo]    = useState(init.tipo||"");
   const [urgente, setUrgente] = useState(init.urgente||false);
+  const [modalidad,setModalidad] = useState(init.modalidad||"presencial");
+  const [requisitos,setRequisitos] = useState(init.requisitos||[]);
 
   // Importador de link
   const [showImport, setShowImport] = useState(false);
   const [importUrl,  setImportUrl]  = useState("");
+  const [importTexto, setImportTexto] = useState("");
+  const [importMode, setImportMode] = useState("url"); // 'url' o 'texto'
   const [importing,  setImporting]  = useState(false);
   const [importError,setImportError]= useState("");
 
   const importarDesdeLink = async () => {
-    if(!importUrl.trim()) return;
+    const contenido = importMode === "url" ? importUrl.trim() : importTexto.trim();
+    if(!contenido) return;
     setImporting(true);
     setImportError("");
     try {
-      const prompt = `Analizá este aviso de empleo y extraé la información en JSON.
-URL: ${importUrl}
-
-Devolvé SOLO un JSON válido con esta estructura (sin markdown, sin explicaciones):
-{
-  "titulo": "título del puesto o búsqueda",
-  "empresa": "nombre de la empresa",
-  "ciudad": "ciudad o localidad",
-  "tipo": "sector o tipo de industria",
-  "descripcion": "descripción completa del aviso",
-  "presupuesto": 0,
-  "moneda": "ARS",
-  "urgente": false
-}
-
-Si no podés acceder a la URL, inferí lo que podás del link mismo.`;
+      const prompt = importMode === "url"
+        ? `Analizá este aviso de empleo de la URL: ${contenido}\n\nExtrae la información y devolvé SOLO un JSON válido (sin markdown):\n{"titulo":"","empresa":"","ciudad":"","tipo":"","descripcion":"","presupuesto":0,"moneda":"ARS","urgente":false,"modalidad":"presencial","requisitos":[]}`
+        : `Analizá este texto de aviso de empleo:\n\n${contenido}\n\nExtrae la información y devolvé SOLO un JSON válido (sin markdown):\n{"titulo":"","empresa":"","ciudad":"","tipo":"","descripcion":"","presupuesto":0,"moneda":"ARS","urgente":false,"modalidad":"presencial","requisitos":[]}`;
 
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -3311,11 +3303,9 @@ Si no podés acceder a la URL, inferí lo que podás del link mismo.`;
       });
       const data = await r.json();
       const text = data.content?.[0]?.text || "";
-      // Parsear JSON
       const match = text.match(/\{[\s\S]*\}/);
       if(!match) throw new Error("No se pudo extraer la información");
       const info = JSON.parse(match[0]);
-      // Pre-completar campos
       if(info.titulo)      setTitulo(info.titulo);
       if(info.descripcion) setDesc(info.descripcion);
       if(info.ciudad)      setCiudad(info.ciudad);
@@ -3323,12 +3313,13 @@ Si no podés acceder a la URL, inferí lo que podás del link mismo.`;
       if(info.presupuesto) setPres(info.presupuesto);
       if(info.moneda)      setMoneda(info.moneda);
       if(info.urgente)     setUrgente(info.urgente);
+      if(info.modalidad)   setModalidad(info.modalidad);
+      if(info.requisitos?.length) setRequisitos(info.requisitos);
       setShowImport(false);
-      setImportUrl("");
+      setImportUrl(""); setImportTexto("");
       toast_("✓ Aviso importado correctamente");
     } catch(e) {
-      console.error("Error importando:", e);
-      setImportError("No pudimos importar ese link. Completá los datos manualmente.");
+      setImportError("No pudimos procesar eso. Probá pegando el texto del aviso directamente.");
     }
     setImporting(false);
   };
@@ -3345,7 +3336,9 @@ Si no podés acceder a la URL, inferí lo que podás del link mismo.`;
         id:esEdicion?busquedaEditar.id:Date.now(),
         empresa:empNombre,tipo:tipo||"Busqueda",ciudad:ciudad,distancia:5,
         presupuesto:Number(pres)||0,moneda:moneda,duracion:"A convenir",urgente:urgente,
-        descripcion:desc||titulo,requisitos:[titulo],avatar:empInit,
+        descripcion:desc||titulo,requisitos:requisitos.length?requisitos:[titulo],
+        modalidad:modalidad,
+        avatar:empInit,
         color:busquedaEditar?busquedaEditar.color:"#2A9D8F",
         email:userData.email||"",tel:userData.tel||"",seguro:seguro,
         estado:estadoNuevo,pausadoPorLimite:limiteAlcanzado,esMia:true,
@@ -3408,26 +3401,54 @@ Si no podés acceder a la URL, inferí lo que podás del link mismo.`;
             {showImport ? (
               <div style={{background:"#f0f0f8",borderRadius:14,padding:14}}>
                 <div style={{fontWeight:700,fontSize:13,color:"#1a1a2e",marginBottom:8}}>
-                  📎 Pegá el link del aviso
+                  ✨ Importar aviso con IA
                 </div>
-                <div style={{fontSize:12,color:"#888",marginBottom:10}}>
-                  LinkedIn, Indeed, Computrabajo, ZonaJobs, etc.
+                {/* Toggle URL / Texto */}
+                <div style={{display:"flex",gap:6,marginBottom:10}}>
+                  {[{v:"url",l:"🔗 Pegar link"},{v:"texto",l:"📋 Pegar texto"}].map(m=>(
+                    <button key={m.v} onClick={()=>setImportMode(m.v)}
+                      style={{flex:1,padding:"7px",borderRadius:10,fontSize:12,fontWeight:700,
+                        border:importMode===m.v?"2px solid #1a1a2e":"2px solid #e0e0ef",
+                        background:importMode===m.v?"#1a1a2e":"#fff",
+                        color:importMode===m.v?"#fff":"#888",cursor:"pointer",fontFamily:"inherit"}}>
+                      {m.l}
+                    </button>
+                  ))}
                 </div>
-                <input value={importUrl} onChange={e=>setImportUrl(e.target.value)}
-                  placeholder="https://www.linkedin.com/jobs/..."
-                  style={{width:"100%",padding:"10px 12px",borderRadius:10,
-                    border:"1.5px solid #e0e0ef",fontSize:13,outline:"none",
-                    boxSizing:"border-box",marginBottom:8,fontFamily:"inherit"}}/>
+                {importMode==="url" ? (
+                  <>
+                    <div style={{fontSize:12,color:"#888",marginBottom:6}}>
+                      LinkedIn, Indeed, ZonaJobs, BumerAN...
+                    </div>
+                    <input value={importUrl} onChange={e=>setImportUrl(e.target.value)}
+                      placeholder="https://www.linkedin.com/jobs/..."
+                      style={{width:"100%",padding:"10px 12px",borderRadius:10,
+                        border:"1.5px solid #e0e0ef",fontSize:13,outline:"none",
+                        boxSizing:"border-box",marginBottom:6,fontFamily:"inherit"}}/>
+                  </>
+                ) : (
+                  <>
+                    <div style={{fontSize:12,color:"#888",marginBottom:6}}>
+                      Copiá el texto del aviso de Computrabajo u otro portal y pegalo acá
+                    </div>
+                    <textarea value={importTexto} onChange={e=>setImportTexto(e.target.value)}
+                      rows={5} placeholder="Pegá aquí el texto completo del aviso..."
+                      style={{width:"100%",padding:"10px 12px",borderRadius:10,
+                        border:"1.5px solid #e0e0ef",fontSize:13,outline:"none",
+                        boxSizing:"border-box",marginBottom:6,fontFamily:"inherit",resize:"vertical"}}/>
+                  </>
+                )}
                 {importError&&<div style={{fontSize:12,color:"#E63946",marginBottom:8}}>{importError}</div>}
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={importarDesdeLink} disabled={importing||!importUrl.trim()}
+                  <button onClick={importarDesdeLink}
+                    disabled={importing||(importMode==="url"?!importUrl.trim():!importTexto.trim())}
                     style={{flex:1,padding:"10px",borderRadius:10,border:"none",
                       background:importing?"#ccc":"#1a1a2e",color:"#fff",
                       fontWeight:700,fontSize:13,cursor:importing?"not-allowed":"pointer",
                       fontFamily:"inherit"}}>
-                    {importing?"Analizando con IA...":"✨ Importar"}
+                    {importing?"Analizando...":"✨ Importar con IA"}
                   </button>
-                  <button onClick={()=>{setShowImport(false);setImportUrl("");setImportError("");}}
+                  <button onClick={()=>{setShowImport(false);setImportUrl("");setImportTexto("");setImportError("");}}
                     style={{padding:"10px 14px",borderRadius:10,border:"1.5px solid #e0e0ef",
                       background:"#fff",color:"#888",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                     Cancelar
@@ -3441,7 +3462,7 @@ Si no podés acceder a la URL, inferí lo que podás del link mismo.`;
                   color:"#2A9D8F",fontWeight:600,fontSize:13,cursor:"pointer",
                   fontFamily:"inherit",display:"flex",alignItems:"center",
                   justifyContent:"center",gap:8}}>
-                📎 Importar desde LinkedIn, Indeed u otro portal
+                ✨ Importar desde LinkedIn, Computrabajo u otro portal
               </button>
             )}
           </div>
@@ -3461,6 +3482,56 @@ Si no podés acceder a la URL, inferí lo que podás del link mismo.`;
         <Inp label="Ciudad / Zona *" placeholder="Ej: Palermo, CABA" value={ciudad} onChange={setCiudad}/>
         <Txt label="Descripcion" optional value={desc} onChange={setDesc}
           placeholder={esEmpresa?"Describe el proyecto y requisitos...":"Mas detalles..."}/>
+
+        {/* Modalidad */}
+        <div style={{marginBottom:18}}>
+          <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
+            Modalidad de trabajo
+          </label>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {[
+              {v:"presencial",l:"🏢 Presencial"},
+              {v:"remoto",l:"🏠 Remoto"},
+              {v:"hibrido",l:"🔄 Híbrido"},
+            ].map(m=>(
+              <button key={m.v} onClick={()=>setModalidad(m.v)}
+                style={{padding:"8px 14px",borderRadius:99,fontSize:13,fontWeight:700,
+                  border:modalidad===m.v?"2px solid #1a1a2e":"2px solid #e0e0ef",
+                  background:modalidad===m.v?"#1a1a2e":"#fff",
+                  color:modalidad===m.v?"#fff":"#888",cursor:"pointer",fontFamily:"inherit"}}>
+                {m.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Requisitos de título */}
+        <div style={{marginBottom:18}}>
+          <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
+            Título requerido <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+          </label>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {[
+              {v:"estudiante",l:"Estudiante"},
+              {v:"tecnico",l:"Técnico"},
+              {v:"auditor",l:"Auditor"},
+              {v:"licenciado",l:"Licenciado"},
+              {v:"ingeniero",l:"Ingeniero"},
+              {v:"cualquiera",l:"Cualquier título"},
+            ].map(r=>(
+              <button key={r.v}
+                onClick={()=>setRequisitos(prev=>
+                  prev.includes(r.v)?prev.filter(x=>x!==r.v):[...prev,r.v]
+                )}
+                style={{padding:"6px 12px",borderRadius:99,fontSize:12,fontWeight:600,
+                  border:requisitos.includes(r.v)?"2px solid #1a1a2e":"2px solid #e0e0ef",
+                  background:requisitos.includes(r.v)?"#1a1a2e":"#fff",
+                  color:requisitos.includes(r.v)?"#fff":"#888",cursor:"pointer",fontFamily:"inherit"}}>
+                {r.l}
+              </button>
+            ))}
+          </div>
+        </div>
         <Honorarios value={pres} moneda={moneda} onValue={setPres} onMoneda={setMoneda}/>
         {esEmpresa&&(
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
