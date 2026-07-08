@@ -4424,6 +4424,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               </div>
             </div>
             {!verificado&&(
+              <div>
               {esPro ? (
                 <div style={{background:"linear-gradient(135deg,#F4A261,#e8853d)",borderRadius:14,
                   padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
@@ -4446,6 +4447,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                   ⭐ {esEmpresa?"Suscribirse · $9.99/mes":"Suscribirse · $2.99/mes"}
                 </button>
               )}
+              </div>
             )}
             <button onClick={function(){setEditando(true);}}
               style={{width:"100%",padding:15,borderRadius:14,border:"1.5px solid #1a1a2e",
