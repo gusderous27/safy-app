@@ -197,6 +197,15 @@ const supa = {
     });
   },
 
+  async getProfileById(token, userId) {
+    const r = await fetch(SUPA_URL + "/rest/v1/profiles?id=eq." + userId + "&select=*", {
+      headers: { ...this.headers, "Authorization": "Bearer " + token }
+    });
+    if(!r.ok) return null;
+    const d = await r.json();
+    return Array.isArray(d) ? (d[0] || null) : null;
+  },
+
   async getMatches(token, userId) {
     const r = await fetch(
       SUPA_URL + "/rest/v1/matches?user1_id=eq." + userId + "&select=*&order=created_at.desc",
@@ -3950,26 +3959,42 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   // Cargar matches desde Supabase al montar
   useEffect(()=>{
     if(!authData?.token || !authData?.user?.id) return;
-    supa.getMatches(authData.token, authData.user.id).then(rows=>{
+    supa.getMatches(authData.token, authData.user.id).then(async rows=>{
       if(rows.length > 0) {
-        // Los matches de Supabase tienen user2_id — buscar el perfil correspondiente
-        const matchesMapeados = rows.map(r=>({
-          id: r.user2_id,
-          nombre: r.user2_nombre || "Conexión",
-          apellido: r.user2_apellido || "",
-          empresa: r.user2_empresa || "",
-          email: r.user2_email || "",
-          tel: r.user2_tel || "",
-          avatar: (r.user2_nombre||"?")[0].toUpperCase(),
-          color: "#2A9D8F",
-          titulo: r.user2_titulo || "",
-          ciudad: r.user2_ciudad || "",
-          created_at: r.created_at,
+        // Para cada match, cargar el perfil completo del otro usuario
+        const matchesConDatos = await Promise.all(rows.map(async r=>{
+          try {
+            const perfil = await supa.getProfileById(authData.token, r.user2_id);
+            if(perfil) {
+              return {
+                id: r.user2_id,
+                nombre: perfil.nombre || "",
+                apellido: perfil.apellido || "",
+                empresa: perfil.empresa || "",
+                email: perfil.email || "",
+                tel: perfil.tel || "",
+                foto: perfil.foto || null,
+                avatar: perfil.nombre ? (perfil.nombre[0]+(perfil.apellido||"?")[0]).toUpperCase() : "??",
+                color: "#2A9D8F",
+                titulo: perfil.titulo || "",
+                ciudad: perfil.ciudad || "",
+                rating: perfil.rating || null,
+                created_at: r.created_at,
+              };
+            }
+          } catch(e) {}
+          return {
+            id: r.user2_id,
+            nombre: "Conexión",
+            avatar: "?",
+            color: "#2A9D8F",
+            email: "",
+            created_at: r.created_at,
+          };
         }));
         setMatches(prev=>{
-          // Combinar con matches locales sin duplicar
           const ids = prev.map(m=>String(m.id));
-          const nuevos = matchesMapeados.filter(m=>!ids.includes(String(m.id)));
+          const nuevos = matchesConDatos.filter(m=>m&&!ids.includes(String(m.id)));
           return [...prev, ...nuevos];
         });
       }
