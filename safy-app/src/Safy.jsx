@@ -189,6 +189,42 @@ const supa = {
     });
   },
 
+  async recordMatch(token, userId, targetId) {
+    await fetch(SUPA_URL + "/rest/v1/matches", {
+      method: "POST",
+      headers: { ...this.headers, "Authorization": "Bearer " + token },
+      body: JSON.stringify({ user1_id: userId, user2_id: String(targetId) })
+    });
+  },
+
+  async getMatches(token, userId) {
+    const r = await fetch(
+      SUPA_URL + "/rest/v1/matches?user1_id=eq." + userId + "&select=*&order=created_at.desc",
+      { headers: { ...this.headers, "Authorization": "Bearer " + token } }
+    );
+    if(!r.ok) return [];
+    const d = await r.json();
+    return Array.isArray(d) ? d : [];
+  },
+
+  async saveMensaje(token, chatId, userId, texto) {
+    await fetch(SUPA_URL + "/rest/v1/mensajes", {
+      method: "POST",
+      headers: { ...this.headers, "Authorization": "Bearer " + token, "Prefer": "return=minimal" },
+      body: JSON.stringify({ chat_id: chatId, user_id: userId, texto, from_role: "me" })
+    });
+  },
+
+  async getMensajes(token, chatId) {
+    const r = await fetch(
+      SUPA_URL + "/rest/v1/mensajes?chat_id=eq." + chatId + "&select=*&order=created_at.asc",
+      { headers: { ...this.headers, "Authorization": "Bearer " + token } }
+    );
+    if(!r.ok) return [];
+    const d = await r.json();
+    return Array.isArray(d) ? d : [];
+  },
+
   async uploadFoto(token, userId, base64) {
     try {
       // Convertir base64 a blob
@@ -2389,22 +2425,42 @@ const Onboarding = ({onComplete, googleData}) => {
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 
-const ChatWindow = ({match,userData,onClose,onSuscribir}) => {
-  const chatKey = "safy_chat_" + ((match&&match.id) ? String(match.id) : "default");
+const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
+  const chatId = [userData?.id||"me", String(match?.id||"them")].sort().join("_");
   const initMsg = [{from:"them",text:"Hola, vi tu perfil en Safy. Me interesa tu experiencia. ¿Podemos coordinar?",time:"10:32"}];
 
-  // Cargar historial desde localStorage
+  // Cargar historial desde localStorage primero, luego Supabase
   const [msgs, setMsgsState] = useState(()=>{
     try {
-      const saved = localStorage.getItem(chatKey);
+      const saved = localStorage.getItem("safy_chat_" + chatId);
       return saved ? JSON.parse(saved) : initMsg;
     } catch(e) { return initMsg; }
   });
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+
+  // Cargar mensajes desde Supabase al abrir
+  useEffect(()=>{
+    if(!authData?.token) return;
+    setLoadingMsgs(true);
+    supa.getMensajes(authData.token, chatId).then(rows=>{
+      if(rows.length > 0) {
+        const mapped = rows.map(r=>({
+          from: r.from_role || "me",
+          text: r.texto,
+          time: new Date(r.created_at).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})
+        }));
+        const combined = [...initMsg, ...mapped];
+        setMsgsState(combined);
+        try { localStorage.setItem("safy_chat_" + chatId, JSON.stringify(combined)); } catch(e) {}
+      }
+      setLoadingMsgs(false);
+    }).catch(()=>setLoadingMsgs(false));
+  },[chatId]);
 
   const setMsgs = fn => {
     setMsgsState(prev => {
       const next = typeof fn === "function" ? fn(prev) : fn;
-      try { localStorage.setItem(chatKey, JSON.stringify(next)); } catch(e) {}
+      try { localStorage.setItem("safy_chat_" + chatId, JSON.stringify(next)); } catch(e) {}
       return next;
     });
   };
@@ -2418,8 +2474,13 @@ const ChatWindow = ({match,userData,onClose,onSuscribir}) => {
     if(!input.trim()) return;
     const now = new Date();
     const t = now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
-    setMsgs(m=>[...m,{from:"me",text:input.trim(),time:t}]);
+    const texto = input.trim();
+    setMsgs(m=>[...m,{from:"me",text:texto,time:t}]);
     setInput("");
+    // Guardar en Supabase
+    if(authData?.token && authData?.user?.id) {
+      supa.saveMensaje(authData.token, chatId, authData.user.id, texto).catch(()=>{});
+    }
     const rs=["¿Qué días tenés disponibles?","¿Podés enviarme tu CV?","¿Cuál es tu tarifa?","Te mando más detalles.","¿Tenés experiencia en el sector?"];
     setTimeout(()=>{
       const now2=new Date();
@@ -3886,6 +3947,35 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     loadProfiles();
   },[]);
 
+  // Cargar matches desde Supabase al montar
+  useEffect(()=>{
+    if(!authData?.token || !authData?.user?.id) return;
+    supa.getMatches(authData.token, authData.user.id).then(rows=>{
+      if(rows.length > 0) {
+        // Los matches de Supabase tienen user2_id — buscar el perfil correspondiente
+        const matchesMapeados = rows.map(r=>({
+          id: r.user2_id,
+          nombre: r.user2_nombre || "Conexión",
+          apellido: r.user2_apellido || "",
+          empresa: r.user2_empresa || "",
+          email: r.user2_email || "",
+          tel: r.user2_tel || "",
+          avatar: (r.user2_nombre||"?")[0].toUpperCase(),
+          color: "#2A9D8F",
+          titulo: r.user2_titulo || "",
+          ciudad: r.user2_ciudad || "",
+          created_at: r.created_at,
+        }));
+        setMatches(prev=>{
+          // Combinar con matches locales sin duplicar
+          const ids = prev.map(m=>String(m.id));
+          const nuevos = matchesMapeados.filter(m=>!ids.includes(String(m.id)));
+          return [...prev, ...nuevos];
+        });
+      }
+    }).catch(()=>{});
+  },[authData]);
+
   // Verificar suscripción activa y retorno de pago
   useEffect(()=>{
     const checkSub = async () => {
@@ -3964,8 +4054,14 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   const swipe = dir => {
     const cur=items[idx];
     if(dir==="yes"){
-      if(Math.random()>.4){setMatches(m=>[...m,cur]);setTimeout(()=>setMatchPop(cur),300);}
-      else toast_("Interés enviado!");
+      if(Math.random()>.4){
+        setMatches(m=>[...m,cur]);
+        setTimeout(()=>setMatchPop(cur),300);
+        // Guardar match en Supabase
+        if(authData?.token && authData?.user?.id) {
+          supa.recordMatch(authData.token, authData.user.id, cur.id).catch(()=>{});
+        }
+      } else toast_("Interés enviado!");
     }
     setIdx(i=>i+1);
   };
@@ -4001,7 +4097,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#f0f0f8",
       minHeight:"100vh",display:"flex",flexDirection:"column",maxWidth:420,margin:"0 auto"}}>
       <style>{CSS}</style>
-      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)} />}
+      {chatWith&&<ChatWindow match={chatWith} userData={userData} authData={authData} onClose={()=>setChatWith(null)} />}
       {perfilViendo&&(
         <PerfilCompleto persona={perfilViendo} onClose={()=>setPerfilViendo(null)}
           onChat={()=>{setChatWith(perfilViendo);setPerfilViendo(null);}}
@@ -4203,7 +4299,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         verificado={verificado}
         onVerificar={()=>{setEditando(false);setShowSusc(true);}}
         onCancelarVerif={()=>setVerificado(false)}/>}
-      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)} />}
+      {chatWith&&<ChatWindow match={chatWith} userData={userData} authData={authData} onClose={()=>setChatWith(null)} />}
       {perfilViendo&&(
         <PerfilCompleto persona={perfilViendo} onClose={()=>setPerfilViendo(null)}
           onChat={()=>{setChatWith(perfilViendo);setPerfilViendo(null);}}
