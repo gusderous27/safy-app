@@ -10,6 +10,13 @@ const SUPA_KEY = "sb_publishable_JmENOILK3rOPz9-0IqcA1A_1or2An5-";
 const STRIPE_PK = "pk_test_51Tr1t9Qkrzuq7ECFNPPay8IvwsD2aEVSRERncvMAawdiEAPOXnmk6s1vIYJYVr0CXRxUyLpoGZO4R6tNxsSXEdMW00Mfg4QqCI";
 const MP_PUBLIC_KEY = "APP_USR-6f4a7b96-4f9d-448d-a34f-20ee96ca9ffc";
 
+const STRIPE_LINKS = {
+  profesional_mensual: "https://buy.stripe.com/test_14A9AVguA3ie2EnbBBffy00",
+  profesional_anual:   "https://buy.stripe.com/test_dRm4gB1zGaKGgvdfRRffy01",
+  empresa_mensual:     "https://buy.stripe.com/test_3cIaEZ4LSg502EnbBBffy02",
+  empresa_anual:       "https://buy.stripe.com/test_dRm8wRguA5qm4Mv6hhffy03",
+};
+
 const PLANES = {
   profesional_mensual: { id: "price_1Tr23hQkrzuq7ECF4P9iF6TV", precio: 2.99, moneda: "USD", periodo: "mensual", label: "$2.99/mes" },
   profesional_anual:   { id: "price_1Tr24JQkrzuq7ECF9eAghfLO", precio: 34.18, moneda: "USD", periodo: "anual", label: "$34.18/año" },
@@ -1081,40 +1088,14 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
     "✅ Badge empresa verificada",
   ];
 
-  const handleStripe = async () => {
-    setLoading(true);
-    try {
-      // Redirigir a Stripe Checkout
-      const stripe = window.Stripe ? window.Stripe(STRIPE_PK) : null;
-      if(!stripe) {
-        // Cargar Stripe.js dinámicamente
-        const script = document.createElement("script");
-        script.src = "https://js.stripe.com/v3/";
-        script.onload = async () => {
-          const s = window.Stripe(STRIPE_PK);
-          await s.redirectToCheckout({
-            lineItems: [{price: plan.id, quantity: 1}],
-            mode: "subscription",
-            successUrl: window.location.origin + "?sub=ok&plan=" + planKey,
-            cancelUrl: window.location.origin + "?sub=cancel",
-            customerEmail: authData?.email,
-          });
-        };
-        document.head.appendChild(script);
-      } else {
-        await stripe.redirectToCheckout({
-          lineItems: [{price: plan.id, quantity: 1}],
-          mode: "subscription",
-          successUrl: window.location.origin + "?sub=ok&plan=" + planKey,
-          cancelUrl: window.location.origin + "?sub=cancel",
-          customerEmail: authData?.email,
-        });
-      }
-    } catch(e) {
-      console.error("Error Stripe:", e);
-      alert("Error al procesar el pago. Intentá de nuevo.");
-    }
-    setLoading(false);
+  const handleStripe = () => {
+    const link = STRIPE_LINKS[planKey];
+    if(!link) { alert("Plan no encontrado"); return; }
+    // Agregar email y URL de retorno al link
+    const url = link + "?prefilled_email=" + encodeURIComponent(authData?.email||"") +
+      "&client_reference_id=" + (authData?.user?.id||"") +
+      "&success_url=" + encodeURIComponent(window.location.origin + "?sub=ok&plan=" + planKey);
+    window.location.href = url;
   };
 
   const handleMP = async () => {
@@ -1689,14 +1670,14 @@ const ModalLegal = ({tipo, onClose}) => {
     {t:"2. Responsabilidad del usuario", c:"El usuario declara que su perfil es veraz. Safy no verifica titulos ni matriculas."},
     {t:"3. Limitacion de responsabilidad", c:"Safy NO se responsabiliza por falta de pago, incumplimientos contractuales, accidentes laborales, conductas antieticas ni danos entre usuarios."},
     {t:"4. Contrataciones", c:"Los acuerdos son responsabilidad de las partes. Las empresas deben validar credenciales antes de contratar."},
-    {t:"5. Ley aplicable", c:"Rige la ley argentina. Jurisdiccion: tribunales de CABA. Contacto: legal@safy.app"},
+    {t:"5. Ley aplicable", c:"Rige la ley argentina. Jurisdiccion: tribunales de CABA. Contacto: legal@safyjobs.com"},
   ] : [
     {t:"1. Datos que recopilamos", c:"Nombre, email, telefono, foto, ubicacion, titulo, experiencia, skills y descripcion. Tambien datos de uso y geolocalizacion."},
     {t:"2. Para que usamos tus datos", c:"Crear tu perfil, conectarte segun ubicacion, enviarte notificaciones y mejorar la Plataforma."},
     {t:"3. Que ven otros usuarios", c:"Nombre, foto, titulo, ciudad y skills. Tu email y telefono solo se comparten al hacer match."},
     {t:"4. No vendemos tus datos", c:"Safy no vende datos a terceros. Solo con proveedores bajo acuerdos de confidencialidad."},
     {t:"5. Tus derechos", c:"Podes acceder, rectificar y eliminar tus datos. Al eliminar tu cuenta, los datos se borran en 30 dias habiles."},
-    {t:"6. Ley aplicable", c:"Ley 25.326 (Argentina), RGPD (Espana). Contacto: privacidad@safy.app"},
+    {t:"6. Ley aplicable", c:"Ley 25.326 (Argentina), RGPD (Espana). Contacto: privacidad@safyjobs.com"},
   ];
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(26,26,46,0.92)",zIndex:3000,
@@ -2987,10 +2968,10 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
       onMouseUp={end} onMouseLeave={end}
       onTouchStart={e=>start(e.touches[0].clientX)}
       onTouchMove={e=>move(e.touches[0].clientX)} onTouchEnd={end}
-      style={{position:"absolute",width:"100%",userSelect:"none",touchAction:"none",
+      style={{position:"relative",width:"100%",userSelect:"none",touchAction:"none",
         transform:"translateX("+dx+"px) rotate("+(dx/18)+"deg)",
         transition:dragging?"none":"transform .3s ease",
-        opacity:1-Math.abs(dx)/500,cursor:isTop?"grab":"default"}}>
+        cursor:isTop?"grab":"default"}}>
       {dec==="yes"&&(
         <div style={{position:"absolute",top:24,left:24,zIndex:10,padding:"8px 20px",
           borderRadius:8,border:"3px solid #2A9D8F",color:"#2A9D8F",fontWeight:800,
@@ -3137,16 +3118,16 @@ const FeedItem = ({obra,onPostular,yaPostulado}) => {
                 </div>
                 {[
                   {icon:"🔗",label:"Copiar link",action:()=>{
-                    navigator.clipboard&&navigator.clipboard.writeText("https://safy.app/oportunidad/"+obra.id);
+                    navigator.clipboard&&navigator.clipboard.writeText("https://safyjobs.com/oportunidad/"+obra.id);
                     setShareOpen(false);setCopied(true);setTimeout(()=>setCopied(false),2000);
                   }},
                   {icon:"💬",label:"WhatsApp",action:()=>{
                     window.open("https://wa.me/?text="+encodeURIComponent(
-                      "Mirá esta oportunidad en Safy: "+obra.empresa+" busca en "+obra.ciudad+". https://safy.app/oportunidad/"+obra.id));
+                      "Mirá esta oportunidad en Safy: "+obra.empresa+" busca en "+obra.ciudad+". https://safyjobs.com/oportunidad/"+obra.id));
                     setShareOpen(false);
                   }},
                   {icon:"💼",label:"LinkedIn",action:()=>{
-                    window.open("https://www.linkedin.com/sharing/share-offsite/?url="+encodeURIComponent("https://safy.app/oportunidad/"+obra.id));
+                    window.open("https://www.linkedin.com/sharing/share-offsite/?url="+encodeURIComponent("https://safyjobs.com/oportunidad/"+obra.id));
                     setShareOpen(false);
                   }},
                 ].map(({icon,label,action})=>(
@@ -3196,7 +3177,7 @@ const MatchPop = ({item,userData,onClose,onGoToMatches}) => {
           <div style={{fontSize:11,fontWeight:700,color:"#aaa",marginBottom:8,textTransform:"uppercase"}}>
             Contacto de {item.nombre||item.empresa}
           </div>
-          <div style={{fontSize:13,color:"#1a73e8",fontWeight:600,marginBottom:4}}>{item.email||"contacto@safy.app"}</div>
+          <div style={{fontSize:13,color:"#1a73e8",fontWeight:600,marginBottom:4}}>{item.email||"contacto@safyjobs.com"}</div>
           <div style={{fontSize:13,color:"#1a1a2e",fontWeight:600}}>{item.tel||"—"}</div>
         </div>
         <div style={{background:"#fffbf3",borderRadius:14,padding:"11px 16px",marginBottom:20,
@@ -3937,21 +3918,18 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               </div>
             ):(
               <>
-                <div style={{position:"relative",marginBottom:16}}>
-                  {remaining.slice(0,3).map((item,i)=>(
-                    <div key={item.id} style={{
-                      position:i===0?"relative":"absolute",
-                      top:0,width:"100%",zIndex:3-i,
-                      transform:i>0?("scale("+(1-i*.03)+") translateY("+(i*10)+"px)"):"none",
-                      transformOrigin:"top center",
-                      pointerEvents:i===0?"auto":"none",
-                    }}>
-                      <SwipeCard item={item} type={vista==="profesional"?"profesional":"obra"}
-                        onSwipe={swipe} isTop={i===0}/>
-                    </div>
-                  ))}
+                {/* Card principal — ocupa todo el ancho */}
+                <div style={{marginBottom:16}}>
+                  <SwipeCard item={remaining[0]} type={vista==="profesional"?"profesional":"obra"}
+                    onSwipe={swipe} isTop={true}/>
+                  {/* Cards de fondo sutiles */}
+                  {remaining[1]&&(
+                    <div style={{height:8,background:"#e8e8f0",borderRadius:"0 0 16px 16px",
+                      margin:"-4px 8px 0",zIndex:-1,position:"relative"}}/>
+                  )}
                 </div>
-                <div style={{display:"flex",justifyContent:"center",gap:20}}>
+                {/* Botones ✕/✓ */}
+                <div style={{display:"flex",justifyContent:"center",gap:24,marginBottom:8}}>
                   <button onClick={()=>swipe("no")}
                     style={{width:56,height:56,borderRadius:"50%",border:"1.5px solid #E63946",
                       background:"#fff",color:"#E63946",fontSize:20,cursor:"pointer",
@@ -3965,7 +3943,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                     ✓
                   </button>
                 </div>
-                <div style={{textAlign:"center",color:"#bbb",fontSize:12,marginTop:12}}>
+                <div style={{textAlign:"center",color:"#bbb",fontSize:12}}>
                   Deslizá o usá los botones
                 </div>
               </>
@@ -4218,7 +4196,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                       Contacto
                     </div>
                     <div style={{fontSize:13,color:"#1a73e8",fontWeight:600,marginBottom:3}}>
-                      {m.email||"contacto@safy.app"}
+                      {m.email||"contacto@safyjobs.com"}
                     </div>
                     <div style={{fontSize:13,color:"#1a1a2e",fontWeight:600}}>{m.tel||"—"}</div>
                   </div>
@@ -4392,7 +4370,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 <button
                   onClick={()=>{
                     const name = (userData.nombre||userData.empresa||"").replace(/\s/g,"-").toLowerCase();
-                    const link = "https://safy.app/perfil/"+name;
+                    const link = "https://safyjobs.com/perfil/"+name;
                     if(navigator.clipboard) navigator.clipboard.writeText(link).then(()=>toast_("Link copiado"));
                   }}
                   style={{flex:1,padding:"10px 0",borderRadius:12,border:"1.5px solid #e0e0ef",
@@ -4403,7 +4381,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 <button
                   onClick={()=>{
                     const name = (userData.nombre||userData.empresa||"").replace(/\s/g,"-").toLowerCase();
-                    const link = "https://safy.app/perfil/"+name;
+                    const link = "https://safyjobs.com/perfil/"+name;
                     const texto = encodeURIComponent("Mi perfil profesional en Safy: "+link);
                     window.open("https://wa.me/?text="+texto,"_blank");
                   }}
@@ -4414,7 +4392,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 <button
                   onClick={()=>{
                     const name = (userData.nombre||userData.empresa||"").replace(/\s/g,"-").toLowerCase();
-                    const link = encodeURIComponent("https://safy.app/perfil/"+name);
+                    const link = encodeURIComponent("https://safyjobs.com/perfil/"+name);
                     window.open("https://www.linkedin.com/sharing/share-offsite/?url="+link,"_blank");
                   }}
                   style={{padding:"10px 14px",borderRadius:12,border:"none",background:"#0A66C2",
