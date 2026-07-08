@@ -2355,35 +2355,38 @@ const Onboarding = ({onComplete, googleData}) => {
 
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 
-const LIMITE_MSG_GRATIS = 5;
+const ChatWindow = ({match,userData,onClose,onSuscribir}) => {
+  const chatKey = "safy_chat_" + ((match&&match.id) ? String(match.id) : "default");
+  const initMsg = [{from:"them",text:"Hola, vi tu perfil en Safy. Me interesa tu experiencia. ¿Podemos coordinar?",time:"10:32"}];
 
-const ChatWindow = ({match,userData,onClose,esPro,onSuscribir}) => {
-  const chatKey = (match&&match.id) ? String(match.id) : "default";
-  const initMsg = [{from:"them",text:"Hola, vi tu perfil en Safy. Me interesa tu experiencia. Podemos coordinar?",time:"10:32"}];
-  const [historial,setHistorial] = useState({});
-  const msgs = historial[chatKey]||initMsg;
-  const setMsgs = fn => setHistorial(h=>{
-    const prev = h[chatKey]||initMsg;
-    return {...h,[chatKey]:typeof fn==="function"?fn(prev):fn};
+  // Cargar historial desde localStorage
+  const [msgs, setMsgsState] = useState(()=>{
+    try {
+      const saved = localStorage.getItem(chatKey);
+      return saved ? JSON.parse(saved) : initMsg;
+    } catch(e) { return initMsg; }
   });
+
+  const setMsgs = fn => {
+    setMsgsState(prev => {
+      const next = typeof fn === "function" ? fn(prev) : fn;
+      try { localStorage.setItem(chatKey, JSON.stringify(next)); } catch(e) {}
+      return next;
+    });
+  };
+
   const [input,setInput] = useState("");
-  const [showLimite,setShowLimite] = useState(false);
   const myInit = userData.nombre
     ? (userData.nombre[0]+(userData.apellido||" ")[0]).toUpperCase()
     : (userData.empresa||"??").slice(0,2).toUpperCase();
 
-  // Contar solo mensajes enviados por mí
-  const misMsg = msgs.filter(m=>m.from==="me").length;
-  const llegóAlLimite = !esPro && misMsg >= LIMITE_MSG_GRATIS;
-
   const send = () => {
     if(!input.trim()) return;
-    if(llegóAlLimite) { setShowLimite(true); return; }
     const now = new Date();
     const t = now.getHours()+":"+String(now.getMinutes()).padStart(2,"0");
     setMsgs(m=>[...m,{from:"me",text:input.trim(),time:t}]);
     setInput("");
-    const rs=["Que días tenés disponibles?","Podés enviarme tu CV?","Cuál es tu tarifa?","Te mando más detalles.","Tenés experiencia en el sector?"];
+    const rs=["¿Qué días tenés disponibles?","¿Podés enviarme tu CV?","¿Cuál es tu tarifa?","Te mando más detalles.","¿Tenés experiencia en el sector?"];
     setTimeout(()=>{
       const now2=new Date();
       const t2=now2.getHours()+":"+String(now2.getMinutes()).padStart(2,"0");
@@ -2429,38 +2432,18 @@ const ChatWindow = ({match,userData,onClose,esPro,onSuscribir}) => {
         })}
       </div>
       <div style={{background:"#fff",padding:"12px 14px",borderTop:"1px solid #ebebeb",
-        display:"flex",gap:10,alignItems:"center",flexShrink:0}}>
-        {llegóAlLimite ? (
-          <div style={{flex:1,background:"#fffbf3",border:"1.5px solid #F4A261",
-            borderRadius:14,padding:"10px 14px",textAlign:"center"}}>
-            <div style={{fontSize:12,color:"#c97e1a",fontWeight:700,marginBottom:6}}>
-              🔒 Límite de {LIMITE_MSG_GRATIS} mensajes gratis alcanzado
-            </div>
-            <button onClick={()=>{onClose();onSuscribir&&onSuscribir();}}
-              style={{background:"linear-gradient(135deg,#F4A261,#e8853d)",border:"none",
-                borderRadius:99,padding:"6px 16px",fontSize:12,fontWeight:800,
-                color:"#1a1a2e",cursor:"pointer",fontFamily:"inherit"}}>
-              ⭐ Suscribirme para continuar
-            </button>
-          </div>
-        ) : (
-          <>
-            {!esPro&&<div style={{fontSize:10,color:"#aaa",position:"absolute",top:-16,left:14}}>
-              {LIMITE_MSG_GRATIS - misMsg} mensajes gratis restantes
-            </div>}
-            <input value={input} onChange={e=>setInput(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&send()}
-              placeholder="Escribí un mensaje..."
-              style={{flex:1,padding:"11px 14px",borderRadius:99,border:"1.5px solid #e0e0ef",
-                fontSize:14,outline:"none",background:"#f8f8fc"}}/>
-            <button onClick={send}
-              style={{width:42,height:42,borderRadius:"50%",background:"#1a1a2e",border:"none",
-                color:"#fff",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",
-                justifyContent:"center",fontFamily:"inherit"}}>
-              ›
-            </button>
-          </>
-        )}
+        display:"flex",gap:10,alignItems:"center",flexShrink:0,position:"relative"}}>
+        <input value={input} onChange={e=>setInput(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&send()}
+          placeholder="Escribí un mensaje..."
+          style={{flex:1,padding:"11px 14px",borderRadius:99,border:"1.5px solid #e0e0ef",
+            fontSize:14,outline:"none",background:"#f8f8fc"}}/>
+        <button onClick={send}
+          style={{width:42,height:42,borderRadius:"50%",background:"#1a1a2e",border:"none",
+            color:"#fff",fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",
+            justifyContent:"center",fontFamily:"inherit"}}>
+          ›
+        </button>
       </div>
     </div>
   );
@@ -3298,7 +3281,7 @@ const MatchPop = ({item,userData,onClose,onGoToMatches}) => {
 
 // ─── NUEVA BÚSQUEDA MODAL (profesional) ──────────────────────────────────────
 
-const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,setMisBusquedas,setObras,onSuscribir,toast_,onClose,busquedaEditar,idxEditar}) => {
+const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActivas,setMisBusquedas,setObras,onSuscribir,toast_,onClose,busquedaEditar,idxEditar}) => {
   var esEdicion = busquedaEditar!=null;
   var init = busquedaEditar||{};
   const [titulo,  setTitulo]  = useState(init.descripcion||init.titulo||"");
@@ -3422,20 +3405,24 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
       }
     } else {
       var nombre = ((userData.nombre||"")+" "+(userData.apellido||"")).trim();
+      var limitePro = !esPro&&!esEdicion&&(obrasActivas||0)>=3;
       var nb = {
         id:esEdicion?busquedaEditar.id:Date.now(),
         empresa:nombre||"Profesional",tipo:"Busqueda puntual",ciudad:ciudad,distancia:2,
         presupuesto:Number(pres)||0,moneda:moneda,duracion:"A convenir",urgente:false,
         descripcion:desc||titulo,requisitos:[],avatar:uInit,color:"#2A9D8F",
         email:userData.email||"",tel:userData.tel||"",esProfesional:true,
-        seguro:seguro,estado:esEdicion?(busquedaEditar.estado||"activa"):"activa",
+        seguro:seguro,estado:esEdicion?(busquedaEditar.estado||"activa"):(limitePro?"pausada":"activa"),
+        pausadoPorLimite:limitePro,
+        portales:portales, linkPostulacion:linkPostulacion,
+        modalidad:modalidad,
       };
       if(esEdicion){
         setMisBusquedas(function(prev){return prev.map(function(x,j){return j===idxEditar?nb:x;});});
         toast_("Busqueda actualizada");
       } else {
         setMisBusquedas(function(prev){return [...prev,nb];});
-        toast_("Busqueda publicada");
+        toast_(limitePro?"Aviso guardado en espera — suscribite para activarlo":"Busqueda publicada");
       }
     }
     onClose();
@@ -3999,7 +3986,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     <div style={{fontFamily:"'DM Sans','Inter',system-ui",background:"#f0f0f8",
       minHeight:"100vh",display:"flex",flexDirection:"column",maxWidth:420,margin:"0 auto"}}>
       <style>{CSS}</style>
-      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)} esPro={esPro} onSuscribir={()=>setShowSub(true)}/>}
+      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)} />}
       {perfilViendo&&(
         <PerfilCompleto persona={perfilViendo} onClose={()=>setPerfilViendo(null)}
           onChat={()=>{setChatWith(perfilViendo);setPerfilViendo(null);}}
@@ -4157,6 +4144,13 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           // Guardar en Supabase
           if(authData?.token && authData?.user?.id) {
             try {
+              // Comprimir foto si es base64 muy larga
+              let fotoGuardar = d.foto || null;
+              if(fotoGuardar && fotoGuardar.length > 50000) {
+                // Foto muy grande, no guardar en Supabase por ahora
+                fotoGuardar = null;
+                toast_("Foto guardada localmente (tamaño grande)");
+              }
               await supa.upsertProfile(authData.token, {
                 id: authData.user.id,
                 rol: userRol,
@@ -4174,8 +4168,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 skills: d.skills || [],
                 perfil: d.perfil || null,
                 disponible: d.disponibilidad === "disponible" || d.disponible === true,
-                seguro: d.seguro || false,
-                foto: d.foto || null,
+                disponibilidad: d.disponibilidad || null,
+                horario: d.horario || null,
+                seguro: d.seguro !== undefined ? d.seguro : false,
+                foto: fotoGuardar,
                 radio: Number(d.radio) || 30,
               });
             } catch(e) { console.error("Error guardando perfil:", e); }
@@ -4186,7 +4182,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         verificado={verificado}
         onVerificar={()=>{setEditando(false);setShowSusc(true);}}
         onCancelarVerif={()=>setVerificado(false)}/>}
-      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)} esPro={esPro} onSuscribir={()=>setShowSub(true)}/>}
+      {chatWith&&<ChatWindow match={chatWith} userData={userData} onClose={()=>setChatWith(null)} />}
       {perfilViendo&&(
         <PerfilCompleto persona={perfilViendo} onClose={()=>setPerfilViendo(null)}
           onChat={()=>{setChatWith(perfilViendo);setPerfilViendo(null);}}
@@ -4194,7 +4190,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           onReportar={!esEmpresa?()=>setReportando(perfilViendo):null}/>
       )}
       {showNueva&&<NuevaBusquedaModal userData={userData} uInit={uInit}
+        esPro={esPro}
+        obrasActivas={misBusquedas.filter(b=>b.estado!=="pausada").length}
         setMisBusquedas={setMisBusquedas} toast_={toast_}
+        onSuscribir={()=>setShowSub(true)}
         onClose={()=>setShowNueva(false)}/>}
       {valorando&&<ModalValoracion match={valorando}
         onSubmit={v=>{setValoraciones(p=>({...p,[valorando.id]:v}));toast_("Valoración enviada");}}
