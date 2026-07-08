@@ -198,11 +198,6 @@ const supa = {
     });
     return r.ok;
   },
-      method: "POST",
-      headers: { ...this.headers, "Authorization": "Bearer " + token },
-      body: JSON.stringify({ user1_id: userId, user2_id: String(targetId) })
-    });
-  },
 };
 
 // ─── DATOS ───────────────────────────────────────────────────────────────────
