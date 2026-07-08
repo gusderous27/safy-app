@@ -222,6 +222,8 @@ const supa = {
       return null;
     }
   },
+
+  async getSubscription(token, userId) {
     const r = await fetch(SUPA_URL + "/rest/v1/subscriptions?user_id=eq." + userId + "&estado=eq.activa&select=*&order=created_at.desc&limit=1", {
       headers: { ...this.headers, "Authorization": "Bearer " + token }
     });
