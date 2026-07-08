@@ -3313,6 +3313,8 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
   const [requisitos,setRequisitos] = useState(init.requisitos||[]);
   const [portales, setPortales] = useState(init.portales||[]);
   const [linkPostulacion, setLinkPostulacion] = useState(init.linkPostulacion||"");
+  const [empresaNombre, setEmpresaNombre] = useState(init.empresaNombre||"");
+  const [confidencial, setConfidencial] = useState(init.confidencial||false);
 
   const PORTALES_EMPLEO = [
     // LATAM
@@ -3400,11 +3402,13 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
       var estadoNuevo = limiteAlcanzado?"pausada":"activa";
       var nuevo = {
         id:esEdicion?busquedaEditar.id:Date.now(),
-        empresa:empNombre,tipo:tipo||"Busqueda",ciudad:ciudad,distancia:5,
+        empresa:confidencial?"Empresa confidencial":(empresaNombre||empNombre),
+        confidencial:confidencial,
+        tipo:tipo||"Busqueda",ciudad:ciudad,distancia:5,
         presupuesto:Number(pres)||0,moneda:moneda,duracion:"A convenir",urgente:urgente,
         descripcion:desc||titulo,requisitos:requisitos.length?requisitos:[titulo],
         modalidad:modalidad, portales:portales, linkPostulacion:linkPostulacion,
-        avatar:empInit,
+        avatar:confidencial?"??":(empresaNombre||empNombre).slice(0,2).toUpperCase(),
         color:busquedaEditar?busquedaEditar.color:"#2A9D8F",
         email:userData.email||"",tel:userData.tel||"",seguro:seguro,
         estado:estadoNuevo,pausadoPorLimite:limiteAlcanzado,esMia:true,
@@ -3539,31 +3543,106 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,obrasActivas,se
         </div>
         <Honorarios value={pres} moneda={moneda} onValue={setPres} onMoneda={setMoneda}/>
 
-        {/* Portales donde aparece */}
+        {/* Empresa que publica */}
+        <div style={{marginBottom:18}}>
+          <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
+            Empresa que busca
+          </label>
+          <div style={{display:"flex",gap:8,marginBottom:8}}>
+            <button onClick={()=>upd&&null} style={{display:"none"}}/>
+            {[{v:false,l:"🏢 Mostrar empresa"},{v:true,l:"🔒 Confidencial"}].map(op=>(
+              <button key={String(op.v)}
+                onClick={()=>{
+                  if(op.v) { setEmpresaNombre(""); setConfidencial(true); }
+                  else setConfidencial(false);
+                }}
+                style={{flex:1,padding:"9px",borderRadius:12,fontSize:12,fontWeight:700,
+                  border:confidencial===op.v?"2px solid #1a1a2e":"1.5px solid #e0e0ef",
+                  background:confidencial===op.v?"#1a1a2e":"#fff",
+                  color:confidencial===op.v?"#fff":"#888",cursor:"pointer",fontFamily:"inherit"}}>
+                {op.l}
+              </button>
+            ))}
+          </div>
+          {!confidencial&&(
+            <input value={empresaNombre} onChange={e=>setEmpresaNombre(e.target.value)}
+              placeholder="Nombre de la empresa..."
+              style={{width:"100%",padding:"12px 14px",borderRadius:12,
+                border:"1.5px solid #e0e0ef",fontSize:14,outline:"none",
+                boxSizing:"border-box",fontFamily:"inherit"}}/>
+          )}
+          {confidencial&&(
+            <div style={{background:"#f8f8fc",borderRadius:10,padding:"10px 14px",
+              fontSize:12,color:"#888"}}>
+              El nombre de la empresa no será visible para los candidatos.
+            </div>
+          )}
+        </div>
+
+        {/* Portales — selector desplegable */}
         <div style={{marginBottom:18}}>
           <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:4}}>
             Este aviso también aparece en
           </label>
-          <div style={{fontSize:12,color:"#888",marginBottom:10}}>
-            Opcional — seleccioná los portales donde publicaste
-          </div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-            {PORTALES_EMPLEO.map(p=>(
-              <button key={p.v}
-                onClick={()=>setPortales(prev=>
-                  prev.includes(p.v)?prev.filter(x=>x!==p.v):[...prev,p.v]
-                )}
-                style={{padding:"5px 11px",borderRadius:99,fontSize:12,fontWeight:600,
-                  border:portales.includes(p.v)?"2px solid #1a1a2e":"1.5px solid #e0e0ef",
-                  background:portales.includes(p.v)?"#1a1a2e":"#fff",
-                  color:portales.includes(p.v)?"#fff":"#666",
-                  cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",
-                  alignItems:"center",gap:1}}>
-                <span>{p.l}</span>
-                <span style={{fontSize:9,opacity:.6}}>{p.paises}</span>
-              </button>
-            ))}
-          </div>
+          <div style={{fontSize:12,color:"#888",marginBottom:8}}>Opcional</div>
+          <select
+            onChange={e=>{
+              const v = e.target.value;
+              if(v && !portales.includes(v)) setPortales(prev=>[...prev,v]);
+              e.target.value = "";
+            }}
+            style={{width:"100%",padding:"12px 14px",borderRadius:12,
+              border:"1.5px solid #e0e0ef",fontSize:14,color:"#888",
+              outline:"none",background:"#fff",appearance:"none",
+              WebkitAppearance:"none",boxSizing:"border-box",fontFamily:"inherit",
+              backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\")",
+              backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center"}}>
+            <option value="">Seleccioná un portal...</option>
+            <optgroup label="📍 Argentina">
+              <option value="Computrabajo">Computrabajo</option>
+              <option value="ZonaJobs">ZonaJobs</option>
+              <option value="BumerAN">BumerAN</option>
+              <option value="Trabajando.com">Trabajando.com</option>
+            </optgroup>
+            <optgroup label="🌎 LATAM">
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Indeed">Indeed</option>
+              <option value="Get on Board">Get on Board</option>
+              <option value="Multitrabajos">Multitrabajos</option>
+              <option value="OCC Mundial">OCC Mundial (MX)</option>
+              <option value="El Empleo">El Empleo (CO)</option>
+              <option value="Aptitus">Aptitus (PE)</option>
+              <option value="Glassdoor">Glassdoor</option>
+            </optgroup>
+            <optgroup label="🇪🇸 España">
+              <option value="InfoJobs">InfoJobs</option>
+              <option value="TecnoEmpleo">TecnoEmpleo</option>
+              <option value="Milanuncios">Milanuncios</option>
+              <option value="Trabajos.com">Trabajos.com</option>
+            </optgroup>
+            <optgroup label="🇺🇸 USA">
+              <option value="ZipRecruiter">ZipRecruiter</option>
+              <option value="Monster">Monster</option>
+              <option value="CareerBuilder">CareerBuilder</option>
+            </optgroup>
+          </select>
+          {/* Portales seleccionados */}
+          {portales.length>0&&(
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
+              {portales.map((p,i)=>(
+                <span key={i} style={{background:"#1a1a2e",color:"#fff",fontSize:12,
+                  fontWeight:600,padding:"4px 10px",borderRadius:99,
+                  display:"flex",alignItems:"center",gap:6}}>
+                  {p}
+                  <button onClick={()=>setPortales(prev=>prev.filter(x=>x!==p))}
+                    style={{background:"none",border:"none",color:"rgba(255,255,255,0.6)",
+                      cursor:"pointer",fontSize:14,padding:0,lineHeight:1,fontFamily:"inherit"}}>
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Link de postulación */}
