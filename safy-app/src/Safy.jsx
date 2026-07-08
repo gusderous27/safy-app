@@ -2499,24 +2499,13 @@ const RatingStars = ({rating, trabajos, canRate, onRate}) => {
     if(!canRate) return;
     setSelected(n);
     setHover(0);
-    setShowPanel(true);
-  };
-
-  const handleSend = () => {
-    if(onRate) onRate({stars: selected, comentario: comment});
+    // Enviar inmediatamente sin comentario
+    if(onRate) onRate({stars: n});
     setDone(true);
-    setShowPanel(false);
-  };
-
-  const handleCancel = () => {
-    setShowPanel(false);
-    setSelected(0);
-    setComment("");
   };
 
   return (
     <div style={{marginTop:4}}>
-
       {/* Fila de estrellas */}
       <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
         <div style={{display:"flex",gap:4}}>
@@ -2545,7 +2534,6 @@ const RatingStars = ({rating, trabajos, canRate, onRate}) => {
             );
           })}
         </div>
-
         {/* Número de rating + trabajos */}
         {rating&&!done&&(
           <div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -2553,62 +2541,18 @@ const RatingStars = ({rating, trabajos, canRate, onRate}) => {
             {trabajos&&<span style={{fontSize:12,color:"#aaa"}}>({trabajos} trabajos)</span>}
           </div>
         )}
-
         {/* Label hover */}
         {canRate&&!done&&hover>0&&(
           <span style={{fontSize:12,color:"#F4A261",fontWeight:600}}>{labels[hover]}</span>
         )}
-
-        {/* Confirmación enviada */}
+        {/* Confirmación */}
         {done&&(
           <span style={{fontSize:12,color:"#2A9D8F",fontWeight:600}}>Valoración enviada ✓</span>
         )}
       </div>
-
-      {/* Hint cuando puede valorar y no hay hover */}
       {canRate&&!done&&hover===0&&selected===0&&(
         <div style={{fontSize:11,color:"#aaa",marginTop:4}}>
           Tocá las estrellas para valorar
-        </div>
-      )}
-
-      {/* Panel de comentario inline */}
-      {showPanel&&(
-        <div style={{marginTop:12,background:"#fffbf3",borderRadius:14,padding:"14px 16px",
-          border:"1.5px solid #F4A261"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <div style={{fontWeight:700,fontSize:13,color:"#1a1a2e"}}>
-              {selected} {selected===1?"estrella":"estrellas"} · {labels[selected]}
-            </div>
-            <button onClick={handleCancel}
-              style={{background:"none",border:"none",fontSize:20,color:"#aaa",
-                cursor:"pointer",fontFamily:"inherit",lineHeight:1,padding:0}}>
-              ×
-            </button>
-          </div>
-          <textarea
-            value={comment}
-            onChange={e=>setComment(e.target.value)}
-            placeholder="Comentario opcional..."
-            rows={2}
-            style={{width:"100%",padding:"10px 12px",borderRadius:10,
-              border:"1.5px solid #e0e0ef",fontSize:13,color:"#1a1a2e",outline:"none",
-              resize:"none",boxSizing:"border-box",lineHeight:1.5,fontFamily:"inherit",
-              marginBottom:10}}/>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={handleCancel}
-              style={{flex:1,padding:"9px 0",borderRadius:10,border:"1.5px solid #e0e0ef",
-                background:"#fff",color:"#888",fontWeight:600,fontSize:13,
-                cursor:"pointer",fontFamily:"inherit"}}>
-              Cancelar
-            </button>
-            <button onClick={handleSend}
-              style={{flex:2,padding:"9px 0",borderRadius:10,border:"none",
-                background:"#1a1a2e",color:"#fff",fontWeight:700,fontSize:13,
-                cursor:"pointer",fontFamily:"inherit"}}>
-              Enviar ★
-            </button>
-          </div>
         </div>
       )}
     </div>
