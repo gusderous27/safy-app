@@ -114,6 +114,38 @@ const STRINGS = {
     perfil_descubri_pro: "Descubrí Safy Pro",
     perfil_plan_activo: "Plan Pro activo",
     perfil_editar: "Editar perfil",
+
+    benef_pro: [
+      "⭐ Aparecés primero en las búsquedas",
+      "🔔 Acceso prioritario a ofertas nuevas",
+      "👁️ Ves quién visitó tu perfil",
+      "📊 Estadísticas de tu perfil",
+      "✅ Badge Pro verificado",
+      "💬 Mensajes ilimitados",
+    ],
+    benef_emp: [
+      "📋 Avisos ilimitados (gratis: hasta 3)",
+      "👥 Ves todos los candidatos (gratis: 5)",
+      "⭐ Destacar avisos en el feed",
+      "📈 Estadísticas de cada aviso",
+      "🎯 Filtros avanzados de búsqueda",
+      "✅ Badge empresa verificada",
+    ],
+    metodo_stripe: "Tarjeta internacional",
+    metodo_mp: "MercadoPago",
+    plan_no_encontrado: "Plan no encontrado",
+    mp_no_configurado: "MercadoPago para este plan todavía no está configurado. Probá por ahora con tarjeta internacional (Stripe).",
+    sub_equivale: "Equivale a",
+    sub_ahorras: "Ahorrás",
+    sub_mes_abrev: "mes",
+    sub_mp_periodo: "por mes · pago en pesos argentinos · cancelá cuando quieras",
+
+    err_password_min: "La contraseña debe tener al menos 6 caracteres",
+    err_signup: "Error al registrarse",
+    err_account_created: "Cuenta creada. Verificá tu email para ingresar.",
+    err_credentials: "Email o contraseña incorrectos",
+    err_connection: "Error de conexión",
+    err_magic_link: "Error al enviar el link",
   },
   en: {
     welcome_tagline: "Smart matching for Health, Safety and Environment professionals",
@@ -168,6 +200,38 @@ const STRINGS = {
     perfil_descubri_pro: "Discover Safy Pro",
     perfil_plan_activo: "Pro plan active",
     perfil_editar: "Edit profile",
+
+    benef_pro: [
+      "⭐ You show up first in search results",
+      "🔔 Priority access to new job posts",
+      "👁️ See who visited your profile",
+      "📊 Profile statistics",
+      "✅ Verified Pro badge",
+      "💬 Unlimited messages",
+    ],
+    benef_emp: [
+      "📋 Unlimited listings (free: up to 3)",
+      "👥 See all candidates (free: 5)",
+      "⭐ Feature listings in the feed",
+      "📈 Stats for every listing",
+      "🎯 Advanced search filters",
+      "✅ Verified company badge",
+    ],
+    metodo_stripe: "International card",
+    metodo_mp: "MercadoPago",
+    plan_no_encontrado: "Plan not found",
+    mp_no_configurado: "MercadoPago isn't set up for this plan yet. Try an international card (Stripe) for now.",
+    sub_equivale: "Equals",
+    sub_ahorras: "Save",
+    sub_mes_abrev: "mo",
+    sub_mp_periodo: "per month · payment in Argentine pesos · cancel anytime",
+
+    err_password_min: "Password must be at least 6 characters",
+    err_signup: "Error signing up",
+    err_account_created: "Account created. Check your email to log in.",
+    err_credentials: "Incorrect email or password",
+    err_connection: "Connection error",
+    err_magic_link: "Error sending the link",
   },
 };
 
@@ -1112,9 +1176,16 @@ const SplashScreen = ({onDone}) => {
 // ─── WELCOME ──────────────────────────────────────────────────────────────────
 
 const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => {
-  const {t} = useLang();
+  const {t, lang, setLang} = useLang();
   return (
-  <div style={{flex:1,display:"flex",flexDirection:"column",background:"#1a1a2e",minHeight:"100vh"}}>
+  <div style={{flex:1,display:"flex",flexDirection:"column",background:"#1a1a2e",minHeight:"100vh",position:"relative"}}>
+    <button onClick={()=>setLang(lang==="es"?"en":"es")}
+      title={lang==="es"?"Switch to English":"Cambiar a Español"}
+      style={{position:"absolute",top:16,right:16,background:"rgba(255,255,255,0.12)",
+        border:"none",borderRadius:99,padding:"6px 12px",color:"#fff",fontSize:11,
+        fontWeight:800,cursor:"pointer",fontFamily:"inherit",letterSpacing:.5,zIndex:5}}>
+      {lang==="es"?"EN":"ES"}
+    </button>
     <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
       justifyContent:"center",padding:"40px 32px"}}>
       {/* Wordmark solo, sin isotipo */}
@@ -1321,6 +1392,7 @@ const TourContextual = ({rol, tabActual, setTab, onFin}) => {
 // ─── PANTALLA SUSCRIPCIÓN ─────────────────────────────────────────────────────
 
 const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
+  const {t} = useLang();
   const [periodo, setPeriodo] = useState("mensual");
   const [loading, setLoading] = useState(false);
   const [metodo, setMetodo] = useState("stripe"); // 'stripe' o 'mp'
@@ -1332,25 +1404,11 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
   const planMP = PLANES_MP[planKey];
   const precioMensualMP = PLANES_MP[rol + "_mensual"];
 
-  const beneficios = rol === "profesional" ? [
-    "⭐ Aparecés primero en las búsquedas",
-    "🔔 Acceso prioritario a ofertas nuevas",
-    "👁️ Ves quién visitó tu perfil",
-    "📊 Estadísticas de tu perfil",
-    "✅ Badge Pro verificado",
-    "💬 Mensajes ilimitados",
-  ] : [
-    "📋 Avisos ilimitados (gratis: hasta 3)",
-    "👥 Ves todos los candidatos (gratis: 5)",
-    "⭐ Destacar avisos en el feed",
-    "📈 Estadísticas de cada aviso",
-    "🎯 Filtros avanzados de búsqueda",
-    "✅ Badge empresa verificada",
-  ];
+  const beneficios = rol === "profesional" ? t("benef_pro") : t("benef_emp");
 
   const handleStripe = () => {
     const link = STRIPE_LINKS[planKey];
-    if(!link) { alert("Plan no encontrado"); return; }
+    if(!link) { alert(t("plan_no_encontrado")); return; }
     // Agregar email y URL de retorno al link
     const url = link + "?prefilled_email=" + encodeURIComponent(authData?.email||"") +
       "&client_reference_id=" + (authData?.user?.id||"") +
@@ -1361,7 +1419,7 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
   const handleMP = () => {
     const link = MP_LINKS[planKey];
     if(!link) {
-      alert("MercadoPago para este plan todavía no está configurado. Probá por ahora con tarjeta internacional (Stripe).");
+      alert(t("mp_no_configurado"));
       return;
     }
     window.location.href = link;
@@ -1383,10 +1441,10 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
       <div style={{textAlign:"center",padding:"24px 20px 20px"}}>
         <div style={{fontSize:56,marginBottom:8}}>{rol==="profesional"?"🦺":"🏗️"}</div>
         <div style={{fontWeight:800,fontSize:24,color:"#fff",marginBottom:6}}>
-          {rol==="profesional"?"Plan Profesional Pro":"Plan Empresa Pro"}
+          {rol==="profesional"?t("sub_pro_title"):t("sub_emp_title")}
         </div>
         <div style={{fontSize:14,color:"#8899bb",lineHeight:1.5}}>
-          Desbloqueá todas las funciones y destacate en SafyJobs
+          {t("sub_hero_sub")}
         </div>
       </div>
 
@@ -1399,7 +1457,7 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
                 background:periodo===p?"#F4A261":"transparent",
                 color:periodo===p?"#1a1a2e":"#aaa",fontWeight:700,fontSize:13,
                 cursor:"pointer",fontFamily:"inherit",position:"relative"}}>
-              {p==="mensual"?"Mensual":"Anual"}
+              {p==="mensual"?t("sub_mensual"):t("sub_anual")}
               {p==="anual"&&<span style={{position:"absolute",top:-8,right:-4,background:"#2A9D8F",
                 color:"#fff",fontSize:9,fontWeight:800,padding:"2px 6px",borderRadius:99}}>-5%</span>}
             </button>
@@ -1417,11 +1475,11 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
         <div style={{fontSize:13,color:"#8899bb",marginTop:4}}>
           {metodo==="mp"
             ? (periodo==="anual"
-                ? `Equivale a ${Math.round(planMP.precio/12).toLocaleString("es-AR")} ARS/mes · Ahorrás ${(precioMensualMP.precio*12-planMP.precio).toLocaleString("es-AR")} ARS`
-                : "por mes · pago en pesos argentinos · cancelá cuando quieras")
+                ? `${t("sub_equivale")} ${Math.round(planMP.precio/12).toLocaleString("es-AR")} ARS/${t("sub_mes_abrev")} · ${t("sub_ahorras")} ${(precioMensualMP.precio*12-planMP.precio).toLocaleString("es-AR")} ARS`
+                : t("sub_mp_periodo"))
             : (periodo==="anual"
-                ? `Equivale a ${(plan.precio/12).toFixed(2)} USD/mes · Ahorrás ${(precioMensual.precio*12-plan.precio).toFixed(2)} USD`
-                : "por mes · cancelá cuando quieras")}
+                ? `${t("sub_equivale")} ${(plan.precio/12).toFixed(2)} USD/${t("sub_mes_abrev")} · ${t("sub_ahorras")} ${(precioMensual.precio*12-plan.precio).toFixed(2)} USD`
+                : t("sub_por_mes"))}
         </div>
       </div>
 
@@ -1441,12 +1499,12 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
       {/* Método de pago */}
       <div style={{padding:"0 20px",marginBottom:16}}>
         <div style={{fontSize:12,color:"#8899bb",fontWeight:600,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>
-          Elegí tu método de pago
+          {t("sub_metodo_label")}
         </div>
         <div style={{display:"flex",gap:8,marginBottom:12}}>
           {[
-            {v:"stripe",l:"💳 Tarjeta internacional"},
-            {v:"mp",l:"🔵 MercadoPago"},
+            {v:"stripe",l:"💳 "+t("metodo_stripe")},
+            {v:"mp",l:"🔵 "+t("metodo_mp")},
           ].map(m=>(
             <button key={m.v} onClick={()=>setMetodo(m.v)}
               style={{flex:1,padding:"10px 8px",borderRadius:12,fontSize:12,fontWeight:700,
@@ -1466,14 +1524,14 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
             background:loading?"#444":"linear-gradient(135deg, #F4A261, #e8853d)",
             color:"#1a1a2e",fontWeight:800,fontSize:16,cursor:loading?"not-allowed":"pointer",
             fontFamily:"inherit",boxShadow:"0 4px 20px rgba(244,162,97,0.4)"}}>
-          {loading?"Procesando...":`Suscribirme por ${metodo==="mp"?planMP.label:plan.label}`}
+          {loading?t("sub_btn_procesando"):`${t("sub_btn_suscribirme")} ${metodo==="mp"?planMP.label:plan.label}`}
         </button>
       </div>
 
       {/* Footer */}
       <div style={{textAlign:"center",padding:"0 20px 32px",fontSize:11,color:"#556",lineHeight:1.6}}>
-        Pago seguro · Cancelá cuando quieras · Sin permanencia
-        <br/>Al suscribirte aceptás los <span style={{color:"#F4A261"}}>Términos</span> de SafyJobs
+        {t("sub_footer")}
+        <br/>{t("sub_footer_terms_pre")} <span style={{color:"#F4A261"}}>{t("sub_footer_terms")}</span> {t("sub_footer_terms_post")}
       </div>
     </div>
   );
@@ -1495,22 +1553,22 @@ const LoginScreen = ({onLogin,isRegistro}) => {
     setLoading(true); setError("");
     try {
       if(isRegistro) {
-        if(password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); setLoading(false); return; }
+        if(password.length < 6) { setError(t("err_password_min")); setLoading(false); return; }
         const res = await supa.signUpEmail(email, password);
-        if(res.error) { setError(res.error.message || "Error al registrarse"); setLoading(false); return; }
+        if(res.error) { setError(res.error.message || t("err_signup")); setLoading(false); return; }
         const loginRes = await supa.signInEmail(email, password);
         if(loginRes.access_token) {
           supa.saveSession({ token: loginRes.access_token, user: loginRes.user, email });
           onLogin({ token: loginRes.access_token, user: loginRes.user, email });
-        } else { setError("Cuenta creada. Verificá tu email para ingresar."); }
+        } else { setError(t("err_account_created")); }
       } else {
         const res = await supa.signInEmail(email, password);
         if(res.access_token) {
           supa.saveSession({ token: res.access_token, user: res.user, email });
           onLogin({ token: res.access_token, user: res.user, email });
-        } else { setError(res.error?.message || "Email o contraseña incorrectos"); }
+        } else { setError(res.error?.message || t("err_credentials")); }
       }
-    } catch(e) { setError("Error de conexión"); }
+    } catch(e) { setError(t("err_connection")); }
     setLoading(false);
   };
 
@@ -1520,24 +1578,24 @@ const LoginScreen = ({onLogin,isRegistro}) => {
     try {
       await supa.signInMagicLink(email);
       setMagicSent(true);
-    } catch(e) { setError("Error al enviar el link"); }
+    } catch(e) { setError(t("err_magic_link")); }
     setLoading(false);
   };
 
   if(magicSent) return (
     <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",padding:"32px 24px",textAlign:"center"}}>
       <div style={{fontSize:56,marginBottom:16}}>📩</div>
-      <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:8}}>Revisá tu email</div>
+      <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:8}}>{t("login_magic_check_title")}</div>
       <div style={{color:"#666",fontSize:14,lineHeight:1.6,marginBottom:24}}>
-        Enviamos un link de acceso a<br/><strong style={{color:"#1a1a2e"}}>{email}</strong>
+        {t("login_magic_check_sub")}<br/><strong style={{color:"#1a1a2e"}}>{email}</strong>
       </div>
       <div style={{background:"#f0fdf4",borderRadius:14,padding:"14px 16px",border:"1.5px solid #86efac",marginBottom:24}}>
         <div style={{fontSize:13,color:"#15803d",lineHeight:1.5}}>
-          Tocá el botón del email para ingresar automáticamente. Sin contraseña.
+          {t("login_magic_check_hint")}
         </div>
       </div>
       <button onClick={()=>setMagicSent(false)} style={{background:"none",border:"none",color:"#888",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-        Volver
+        {t("login_back")}
       </button>
     </div>
   );
@@ -1545,18 +1603,18 @@ const LoginScreen = ({onLogin,isRegistro}) => {
   if(mode==="email") return (
     <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",padding:"32px 24px"}}>
       <button onClick={()=>setMode("main")} style={{background:"none",border:"none",color:"#888",fontSize:22,cursor:"pointer",textAlign:"left",marginBottom:24,padding:0,fontFamily:"inherit"}}>‹</button>
-      <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:4}}>{isRegistro?"Crear cuenta":"Ingresar con email"}</div>
-      <div style={{color:"#888",fontSize:13,marginBottom:24}}>{isRegistro?"Usá tu email para registrarte":"Ingresá tu email y contraseña"}</div>
+      <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:4}}>{isRegistro?t("login_email_title_register"):t("login_email_title_login")}</div>
+      <div style={{color:"#888",fontSize:13,marginBottom:24}}>{isRegistro?t("login_email_sub_register"):t("login_email_sub_login")}</div>
       <Inp label="Email" type="email" placeholder="tucorreo@gmail.com" value={email} onChange={setEmail}/>
-      <Inp label="Contraseña" type="password" placeholder={isRegistro?"Mínimo 6 caracteres":"Tu contraseña"} value={password} onChange={setPassword}/>
+      <Inp label="Contraseña" type="password" placeholder={isRegistro?t("login_password_min"):t("login_password_placeholder")} value={password} onChange={setPassword}/>
       {error&&<div style={{background:"#fdecea",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#E63946",fontWeight:600}}>{error}</div>}
       <Btn onClick={handleEmail} disabled={loading||!email.includes("@")||!password}>
-        {loading?"Procesando...":(isRegistro?"Crear cuenta":"Ingresar")}
+        {loading?t("login_processing"):(isRegistro?t("login_title_register"):t("login_title_login"))}
       </Btn>
-      <Divider label="o sin contraseña"/>
+      <Divider label={t("login_or_no_password")}/>
       <button onClick={handleMagicLink} disabled={loading||!email.includes("@")}
         style={{width:"100%",padding:14,borderRadius:14,border:"1.5px solid #e0e0ef",background:"#fff",color:"#1a1a2e",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit",marginTop:4}}>
-        Enviarme un link mágico ✨
+        {t("login_magic_send")}
       </button>
     </div>
   );
@@ -1565,24 +1623,24 @@ const LoginScreen = ({onLogin,isRegistro}) => {
     <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",padding:"32px 24px"}}>
       <div style={{textAlign:"center",marginBottom:32}}>
         <div style={{fontWeight:800,fontSize:30,color:"#1a1a2e",letterSpacing:-1,marginBottom:4}}>S<span style={{color:"#F4A261"}}>afy</span></div>
-        <div style={{fontWeight:700,fontSize:18,color:"#1a1a2e",marginBottom:4}}>{isRegistro?"Crear cuenta":"Ingresar"}</div>
-        <div style={{fontSize:13,color:"#888"}}>{isRegistro?"Elegí cómo querés registrarte":"Bienvenido de vuelta"}</div>
+        <div style={{fontWeight:700,fontSize:18,color:"#1a1a2e",marginBottom:4}}>{isRegistro?t("login_title_register"):t("login_title_login")}</div>
+        <div style={{fontSize:13,color:"#888"}}>{isRegistro?t("login_sub_register"):t("login_sub_login")}</div>
       </div>
       <button onClick={()=>supa.signInGoogle()}
         style={{width:"100%",padding:"14px",borderRadius:14,border:"1.5px solid #dadce0",background:"#fff",fontWeight:600,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:10,color:"#3c4043",boxShadow:"0 1px 3px rgba(0,0,0,0.08)",fontFamily:"inherit"}}>
-        <GLogo/> Continuar con Google
+        <GLogo/> {t("login_google")}
       </button>
-      <Divider label="o con email"/>
+      <Divider label={t("login_or_email")}/>
       <button onClick={()=>setMode("email")}
         style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:"#1a1a2e",color:"#fff",fontWeight:700,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,fontFamily:"inherit",marginBottom:10}}>
-        ✉️ Continuar con email
+        ✉️ {t("login_email_btn")}
       </button>
       <button onClick={handleMagicLink}
         style={{width:"100%",padding:"14px",borderRadius:14,border:"1.5px solid #e0e0ef",background:"#fff",fontWeight:600,fontSize:15,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,color:"#1a1a2e",fontFamily:"inherit"}}>
-        ✨ Link mágico (sin contraseña)
+        ✨ {t("login_magic_btn")}
       </button>
       <div style={{marginTop:16,textAlign:"center",fontSize:12,color:"rgba(85,102,119,0.8)"}}>
-        Al registrarte aceptás los <span style={{color:"#F4A261",fontWeight:600,cursor:"pointer"}}>Términos</span> y la <span style={{color:"#F4A261",fontWeight:600,cursor:"pointer"}}>Política de privacidad</span>
+        {t("terms_pre")} <span style={{color:"#F4A261",fontWeight:600,cursor:"pointer"}}>{t("terms_word")}</span> {t("terms_mid")} <span style={{color:"#F4A261",fontWeight:600,cursor:"pointer"}}>{t("privacy_word")}</span>
       </div>
     </div>
   );
@@ -4101,6 +4159,7 @@ const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, se
 };
 
 const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,onLogout,esPrimerLogin=false}) => {
+  const {t, lang, setLang} = useLang();
   const esEmpresa = userRol==="empresa";
   const [tab,setTab]                   = useState(esEmpresa?"mis_busquedas":"swipe");
   const [vista,setVista]               = useState("profesional");
@@ -4401,16 +4460,16 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   const DL = {disponible:"Disponible",obra:"En obra",parcial:"Parcial",no:"No disponible"};
 
   const TABS_PRO = [
-    {id:"swipe",l:"Descubrir",e:"🔍"},
-    {id:"feed",l:"Oportunidades",e:"🏗️"},
-    {id:"mis_busquedas",l:"Mis búsquedas",e:"📋"},
-    {id:"matches",l:"Conexiones",e:"🤝"},
-    {id:"perfil",l:"Mi Perfil",e:"👤"},
+    {id:"swipe",l:t("tab_swipe"),e:"🔍"},
+    {id:"feed",l:t("tab_feed"),e:"🏗️"},
+    {id:"mis_busquedas",l:t("tab_busquedas"),e:"📋"},
+    {id:"matches",l:t("tab_matches"),e:"🤝"},
+    {id:"perfil",l:t("tab_perfil"),e:"👤"},
   ];
   const TABS_EMP = [
-    {id:"mis_busquedas",l:"Mis búsquedas",e:"📋"},
-    {id:"matches",l:"Conexiones",e:"🤝"},
-    {id:"perfil",l:"Mi Perfil",e:"👤"},
+    {id:"mis_busquedas",l:t("tab_busquedas"),e:"📋"},
+    {id:"matches",l:t("tab_matches"),e:"🤝"},
+    {id:"perfil",l:t("tab_perfil"),e:"👤"},
   ];
   const TABS = esEmpresa?TABS_EMP:TABS_PRO;
 
@@ -4676,7 +4735,15 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       <div style={{background:"#1a1a2e",color:"#fff",padding:"13px 20px 11px",
         display:"flex",justifyContent:"space-between",alignItems:"center",
         position:"sticky",top:0,zIndex:100}}>
-        <div style={{flex:1}}/>
+        <div style={{flex:1,display:"flex",justifyContent:"flex-start"}}>
+          <button onClick={()=>setLang(lang==="es"?"en":"es")}
+            title={lang==="es"?"Switch to English":"Cambiar a Español"}
+            style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:99,
+              padding:"5px 10px",color:"#fff",fontSize:11,fontWeight:800,cursor:"pointer",
+              fontFamily:"inherit",letterSpacing:.5}}>
+            {lang==="es"?"EN":"ES"}
+          </button>
+        </div>
         <div style={{fontWeight:800,fontSize:24,letterSpacing:-.5,textAlign:"center"}}>
           S<span style={{color:"#F4A261"}}>afy</span>
         </div>
@@ -5284,9 +5351,9 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                   padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:20}}>⭐</span>
                   <div>
-                    <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e"}}>Plan Pro activo</div>
+                    <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e"}}>{t("perfil_plan_activo")}</div>
                     <div style={{fontSize:12,color:"rgba(26,26,46,0.7)"}}>
-                      {suscripcion?.vencimiento ? "Vence " + new Date(suscripcion.vencimiento).toLocaleDateString("es-AR") : ""}
+                      {suscripcion?.vencimiento ? (lang==="en"?"Renews ":"Vence ") + new Date(suscripcion.vencimiento).toLocaleDateString(lang==="en"?"en-US":"es-AR") : ""}
                     </div>
                   </div>
                 </div>
@@ -5298,7 +5365,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                     cursor:"pointer",fontFamily:"inherit",marginBottom:10,
                     display:"flex",alignItems:"center",justifyContent:"center",gap:8,
                     boxShadow:"0 4px 16px rgba(244,162,97,0.4)"}}>
-                  ⭐ Descubrí Safy Pro
+                  ⭐ {t("perfil_descubri_pro")}
                 </button>
               )}
               </div>
@@ -5306,7 +5373,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
             <button onClick={function(){setEditando(true);}}
               style={{width:"100%",padding:15,borderRadius:14,border:"1.5px solid #1a1a2e",
                 background:"#fff",color:"#1a1a2e",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"inherit"}}>
-              Editar perfil
+              {t("perfil_editar")}
             </button>
           </div>
         )}
