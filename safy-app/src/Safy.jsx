@@ -53,6 +53,157 @@ const PLANES_MP = {
   empresa_anual:       { precio: 169999, label: "$169.999/año" },
 };
 
+// ─── IDIOMA (i18n) ────────────────────────────────────────────────────────────
+// Cobertura actual: Bienvenida, Ingreso/Registro, barra de navegación y pantalla
+// de suscripción (las pantallas de mayor tráfico / primera impresión). El resto
+// de la app (onboarding paso a paso, chat, legales, etc.) sigue en español —
+// próxima tanda. Detecta el idioma del navegador (navigator.language) y lo
+// puede overridear el usuario a mano con el selector ES/EN del header;
+// esa elección manual se guarda y tiene prioridad sobre la detección.
+const STRINGS = {
+  es: {
+    welcome_tagline: "El match inteligente para profesionales de Seguridad, Higiene y Medio Ambiente",
+    welcome_login: "Ingresar",
+    welcome_signup: "Crear cuenta",
+    terms_pre: "Al registrarte aceptás los",
+    terms_word: "Términos",
+    terms_mid: "y la",
+    privacy_word: "Política de privacidad",
+
+    login_title_register: "Crear cuenta",
+    login_title_login: "Ingresar",
+    login_sub_register: "Elegí cómo querés registrarte",
+    login_sub_login: "Bienvenido de vuelta",
+    login_google: "Continuar con Google",
+    login_or_email: "o con email",
+    login_email_btn: "Continuar con email",
+    login_magic_btn: "Link mágico (sin contraseña)",
+    login_email_title_register: "Crear cuenta",
+    login_email_title_login: "Ingresar con email",
+    login_email_sub_register: "Usá tu email para registrarte",
+    login_email_sub_login: "Ingresá tu email y contraseña",
+    login_password_min: "Mínimo 6 caracteres",
+    login_password_placeholder: "Tu contraseña",
+    login_processing: "Procesando...",
+    login_or_no_password: "o sin contraseña",
+    login_magic_send: "Enviarme un link mágico ✨",
+    login_magic_check_title: "Revisá tu email",
+    login_magic_check_sub: "Enviamos un link de acceso a",
+    login_magic_check_hint: "Tocá el botón del email para ingresar automáticamente. Sin contraseña.",
+    login_back: "Volver",
+
+    tab_swipe: "Descubrir",
+    tab_feed: "Oportunidades",
+    tab_busquedas: "Mis búsquedas",
+    tab_matches: "Conexiones",
+    tab_perfil: "Mi Perfil",
+
+    sub_pro_title: "Plan Profesional Pro",
+    sub_emp_title: "Plan Empresa Pro",
+    sub_hero_sub: "Desbloqueá todas las funciones y destacate en SafyJobs",
+    sub_mensual: "Mensual",
+    sub_anual: "Anual",
+    sub_por_mes: "por mes · cancelá cuando quieras",
+    sub_metodo_label: "Elegí tu método de pago",
+    sub_btn_procesando: "Procesando...",
+    sub_btn_suscribirme: "Suscribirme por",
+    sub_footer: "Pago seguro · Cancelá cuando quieras · Sin permanencia",
+    sub_footer_terms_pre: "Al suscribirte aceptás los",
+    sub_footer_terms: "Términos",
+    sub_footer_terms_post: "de SafyJobs",
+    perfil_descubri_pro: "Descubrí Safy Pro",
+    perfil_plan_activo: "Plan Pro activo",
+    perfil_editar: "Editar perfil",
+  },
+  en: {
+    welcome_tagline: "Smart matching for Health, Safety and Environment professionals",
+    welcome_login: "Log in",
+    welcome_signup: "Create account",
+    terms_pre: "By signing up you agree to the",
+    terms_word: "Terms",
+    terms_mid: "and the",
+    privacy_word: "Privacy Policy",
+
+    login_title_register: "Create account",
+    login_title_login: "Log in",
+    login_sub_register: "Choose how you want to sign up",
+    login_sub_login: "Welcome back",
+    login_google: "Continue with Google",
+    login_or_email: "or with email",
+    login_email_btn: "Continue with email",
+    login_magic_btn: "Magic link (no password)",
+    login_email_title_register: "Create account",
+    login_email_title_login: "Log in with email",
+    login_email_sub_register: "Use your email to sign up",
+    login_email_sub_login: "Enter your email and password",
+    login_password_min: "At least 6 characters",
+    login_password_placeholder: "Your password",
+    login_processing: "Processing...",
+    login_or_no_password: "or without a password",
+    login_magic_send: "Send me a magic link ✨",
+    login_magic_check_title: "Check your email",
+    login_magic_check_sub: "We sent a login link to",
+    login_magic_check_hint: "Tap the button in the email to log in automatically. No password needed.",
+    login_back: "Back",
+
+    tab_swipe: "Discover",
+    tab_feed: "Opportunities",
+    tab_busquedas: "My listings",
+    tab_matches: "Connections",
+    tab_perfil: "My Profile",
+
+    sub_pro_title: "Professional Pro Plan",
+    sub_emp_title: "Company Pro Plan",
+    sub_hero_sub: "Unlock every feature and stand out on SafyJobs",
+    sub_mensual: "Monthly",
+    sub_anual: "Yearly",
+    sub_por_mes: "per month · cancel anytime",
+    sub_metodo_label: "Choose your payment method",
+    sub_btn_procesando: "Processing...",
+    sub_btn_suscribirme: "Subscribe for",
+    sub_footer: "Secure payment · Cancel anytime · No commitment",
+    sub_footer_terms_pre: "By subscribing you agree to SafyJobs'",
+    sub_footer_terms: "Terms",
+    sub_footer_terms_post: "",
+    perfil_descubri_pro: "Discover Safy Pro",
+    perfil_plan_activo: "Pro plan active",
+    perfil_editar: "Edit profile",
+  },
+};
+
+const detectarIdioma = () => {
+  try {
+    const guardado = localStorage.getItem("safy_lang");
+    if(guardado==="es"||guardado==="en") return guardado;
+  } catch(e) {}
+  try {
+    const nav = (navigator.language||navigator.userLanguage||"es").toLowerCase();
+    return nav.startsWith("en") ? "en" : "es";
+  } catch(e) { return "es"; }
+};
+
+let idiomaActual = "es";
+const idiomaListeners = new Set();
+const cambiarIdioma = (l) => {
+  idiomaActual = l;
+  try { localStorage.setItem("safy_lang", l); } catch(e) {}
+  idiomaListeners.forEach(fn=>fn(l));
+};
+if(typeof window !== "undefined") idiomaActual = detectarIdioma();
+
+// Hook global de idioma — no depende de Context/props, así se puede usar desde
+// cualquier componente sin tener que pasar "lang"/"t" a través de toda la app.
+const useLang = () => {
+  const [lang, setLangState] = useState(idiomaActual);
+  useEffect(()=>{
+    const fn = (l)=>setLangState(l);
+    idiomaListeners.add(fn);
+    return ()=>idiomaListeners.delete(fn);
+  },[]);
+  const t = (key) => (STRINGS[lang] && STRINGS[lang][key]!==undefined) ? STRINGS[lang][key] : (STRINGS.es[key] || key);
+  return { lang, t, setLang: cambiarIdioma };
+};
+
 // Límites del plan gratuito
 const LIMITES_GRATIS = {
   profesional: { swipes_dia: 20, postulaciones_dia: 5 },
@@ -960,7 +1111,9 @@ const SplashScreen = ({onDone}) => {
 
 // ─── WELCOME ──────────────────────────────────────────────────────────────────
 
-const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => (
+const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => {
+  const {t} = useLang();
+  return (
   <div style={{flex:1,display:"flex",flexDirection:"column",background:"#1a1a2e",minHeight:"100vh"}}>
     <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
       justifyContent:"center",padding:"40px 32px"}}>
@@ -976,7 +1129,7 @@ const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => (
       <div style={{fontSize:13,color:"#7788aa",textAlign:"center",lineHeight:1.65,maxWidth:270,
         opacity:visible?1:0,transform:visible?"translateY(0)":"translateY(12px)",
         transition:"opacity 0.7s ease 0.25s, transform 0.7s ease 0.25s"}}>
-        El match inteligente para profesionales<br/>de Seguridad, Higiene y Medio Ambiente
+        {t("welcome_tagline")}
       </div>
       <div style={{width:40,height:3,borderRadius:99,background:"#F4A261",margin:"24px 0 0",
         opacity:visible?1:0,transition:"opacity 0.6s ease 0.35s"}}/>
@@ -987,23 +1140,24 @@ const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => (
       <button onClick={onEntrar}
         style={{width:"100%",padding:"16px",borderRadius:16,border:"2px solid rgba(255,255,255,0.2)",
           background:"transparent",color:"#fff",fontWeight:800,fontSize:17,cursor:"pointer",fontFamily:"inherit"}}>
-        Ingresar
+        {t("welcome_login")}
       </button>
       <button onClick={onRegistrarse}
         style={{width:"100%",padding:"16px",borderRadius:16,border:"none",background:"#F4A261",
           color:"#1a1a2e",fontWeight:800,fontSize:17,cursor:"pointer",fontFamily:"inherit",
           boxShadow:"0 4px 20px rgba(244,162,97,0.4)"}}>
-        Crear cuenta
+        {t("welcome_signup")}
       </button>
       <div style={{textAlign:"center",fontSize:12,color:"rgba(85,102,119,0.8)",marginTop:4}}>
-        Al registrarte aceptás los{" "}
-        <span style={{color:"#F4A261",fontWeight:600}}>Términos</span>
-        {" "}y la{" "}
-        <span style={{color:"#F4A261",fontWeight:600}}>Política de privacidad</span>
+        {t("terms_pre")}{" "}
+        <span style={{color:"#F4A261",fontWeight:600}}>{t("terms_word")}</span>
+        {" "}{t("terms_mid")}{" "}
+        <span style={{color:"#F4A261",fontWeight:600}}>{t("privacy_word")}</span>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 
 // ─── TOUR DE BIENVENIDA ───────────────────────────────────────────────────────
@@ -1328,6 +1482,7 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 
 const LoginScreen = ({onLogin,isRegistro}) => {
+  const {t} = useLang();
   const [mode,setMode] = useState("main");
   const [email,setEmail] = useState("");
   const [password,setPassword] = useState("");
@@ -5143,7 +5298,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                     cursor:"pointer",fontFamily:"inherit",marginBottom:10,
                     display:"flex",alignItems:"center",justifyContent:"center",gap:8,
                     boxShadow:"0 4px 16px rgba(244,162,97,0.4)"}}>
-                  ⭐ {esEmpresa?"Suscribirse · $9.99/mes":"Suscribirse · $2.99/mes"}
+                  ⭐ Descubrí Safy Pro
                 </button>
               )}
               </div>
