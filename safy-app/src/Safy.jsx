@@ -644,6 +644,7 @@ const SECTORES = [
 ];
 
 const DIAS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+const DIAS_LABEL_EN = {Lun:"Mon",Mar:"Tue",Mié:"Wed",Jue:"Thu",Vie:"Fri",Sáb:"Sat",Dom:"Sun"};
 const ADMIN_CODE = "safy2025";
 
 const profesionales = [];
@@ -764,26 +765,28 @@ const Divider = ({label}) => (
 );
 
 const GeoSel = ({pais,provincia,ciudad,onChange}) => {
+  const {lang} = useLang();
   const provs = PROVINCIAS[pais] || PROVINCIAS.default;
   return (
     <div>
-      <Sel label="País *" value={pais||""} onChange={v=>onChange({pais:v,provincia:"",ciudad:""})}
-        options={[{v:"",l:"Seleccioná tu país..."},...PAISES]}/>
+      <Sel label={lang==="en"?"Country *":"País *"} value={pais||""} onChange={v=>onChange({pais:v,provincia:"",ciudad:""})}
+        options={[{v:"",l:lang==="en"?"Select your country...":"Seleccioná tu país..."},...PAISES]}/>
       {pais&&provs.length>0&&(
-        <Sel label="Provincia / Estado *" value={provincia||""} onChange={v=>onChange({pais,provincia:v,ciudad:""})}
-          options={[{v:"",l:"Seleccioná provincia..."},...provs.map(p=>({v:p,l:p}))]}/>
+        <Sel label={lang==="en"?"State / Province *":"Provincia / Estado *"} value={provincia||""} onChange={v=>onChange({pais,provincia:v,ciudad:""})}
+          options={[{v:"",l:lang==="en"?"Select state/province...":"Seleccioná provincia..."},...provs.map(p=>({v:p,l:p}))]}/>
       )}
       {pais&&provs.length===0&&(
-        <Inp label="Provincia / Estado" placeholder="Tu provincia o estado" value={provincia||""} onChange={v=>onChange({pais,provincia:v,ciudad})}/>
+        <Inp label={lang==="en"?"State / Province":"Provincia / Estado"} placeholder={lang==="en"?"Your state or province":"Tu provincia o estado"} value={provincia||""} onChange={v=>onChange({pais,provincia:v,ciudad})}/>
       )}
       {provincia&&(
-        <Inp label="Ciudad / Localidad *" placeholder="Ej: Buenos Aires..." value={ciudad||""} onChange={v=>onChange({pais,provincia,ciudad:v})} hint="Tu base para filtrar oportunidades"/>
+        <Inp label={lang==="en"?"City / Town *":"Ciudad / Localidad *"} placeholder={lang==="en"?"E.g: Miami...":"Ej: Buenos Aires..."} value={ciudad||""} onChange={v=>onChange({pais,provincia,ciudad:v})} hint={lang==="en"?"Your base for filtering opportunities":"Tu base para filtrar oportunidades"}/>
       )}
     </div>
   );
 };
 
 const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
+  const {lang} = useLang();
   const ref      = useRef(null);
   const [src,    setSrc]    = useState(null);
   const [crop,   setCrop]   = useState(false);
@@ -837,9 +840,9 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
     <div style={{position:"fixed",inset:0,background:"rgba(26,26,46,0.96)",zIndex:4000,
       display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
       padding:20,maxWidth:420,margin:"0 auto"}}>
-      <div style={{fontWeight:800,fontSize:18,color:"#fff",marginBottom:4}}>Ajustá tu foto</div>
+      <div style={{fontWeight:800,fontSize:18,color:"#fff",marginBottom:4}}>{lang==="en"?"Adjust your photo":"Ajustá tu foto"}</div>
       <div style={{fontSize:13,color:"#aaa",marginBottom:16,textAlign:"center"}}>
-        Arrastrá para reencuadrar · Zoom con el slider
+        {lang==="en"?"Drag to reposition · Zoom with the slider":"Arrastrá para reencuadrar · Zoom con el slider"}
       </div>
       {/* Vista previa circular */}
       <div style={{width:240,height:240,borderRadius:"50%",overflow:"hidden",
@@ -861,7 +864,7 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
       {/* Zoom slider */}
       <div style={{width:"100%",maxWidth:240,marginBottom:24}}>
         <div style={{fontSize:12,color:"#aaa",marginBottom:6,textAlign:"center"}}>
-          Zoom: {Math.round(zoom*100)}%
+          {lang==="en"?"Zoom":"Zoom"}: {Math.round(zoom*100)}%
         </div>
         <input type="range" min={80} max={300} step={5} value={Math.round(zoom*100)}
           onChange={e=>setZoom(Number(e.target.value)/100)}
@@ -872,13 +875,13 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
           style={{flex:1,padding:"12px 0",borderRadius:12,
             border:"1.5px solid rgba(255,255,255,0.2)",background:"transparent",
             color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
-          Cancelar
+          {lang==="en"?"Cancel":"Cancelar"}
         </button>
         <button onClick={confirmar}
           style={{flex:2,padding:"12px 0",borderRadius:12,border:"none",
             background:"#F4A261",color:"#1a1a2e",fontWeight:800,fontSize:14,
             cursor:"pointer",fontFamily:"inherit"}}>
-          Usar esta foto
+          {lang==="en"?"Use this photo":"Usar esta foto"}
         </button>
       </div>
     </div>
@@ -896,7 +899,7 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
         fontSize:13,fontWeight:600,color:"#1a1a2e",
         cursor:"pointer",userSelect:"none",
       }}>
-        📷 {foto ? "Cambiar foto" : "Subir foto"}
+        📷 {foto ? (lang==="en"?"Change photo":"Cambiar foto") : (lang==="en"?"Upload photo":"Subir foto")}
         <input
           type="file"
           accept="image/*"
@@ -910,6 +913,7 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
 
 
 const SkillSelector = ({selected,onChange,label}) => {
+  const {lang} = useLang();
   const [otroVal,setOtroVal] = useState("");
   const [showOtro,setShowOtro] = useState(false);
   const toggle = s => onChange(selected.includes(s)?selected.filter(x=>x!==s):[...selected,s]);
@@ -922,7 +926,7 @@ const SkillSelector = ({selected,onChange,label}) => {
     <div style={{marginBottom:18}}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
         <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>{label}</label>
-        <span style={{fontSize:11,color:"#888"}}>{selected.length} sel.</span>
+        <span style={{fontSize:11,color:"#888"}}>{selected.length} {lang==="en"?"sel.":"sel."}</span>
       </div>
       <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
         {SKILLS.map(s=><Chip key={s} selected={selected.includes(s)} onClick={()=>toggle(s)}>{s}</Chip>)}
@@ -931,12 +935,12 @@ const SkillSelector = ({selected,onChange,label}) => {
             {s} <span onClick={e=>{e.stopPropagation();onChange(selected.filter(x=>x!==s))}} style={{marginLeft:4,cursor:"pointer"}}>x</span>
           </Chip>
         ))}
-        <Chip onClick={()=>setShowOtro(true)} color="#7B2D8B">+ Otro</Chip>
+        <Chip onClick={()=>setShowOtro(true)} color="#7B2D8B">{lang==="en"?"+ Other":"+ Otro"}</Chip>
       </div>
       {showOtro&&(
         <div style={{display:"flex",gap:8,marginTop:10}}>
           <input value={otroVal} onChange={e=>setOtroVal(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&addOtro()} autoFocus placeholder="Tu skill..."
+            onKeyDown={e=>e.key==="Enter"&&addOtro()} autoFocus placeholder={lang==="en"?"Your skill...":"Tu skill..."}
             style={{flex:1,padding:"10px 13px",borderRadius:12,border:"1.5px solid #7B2D8B",fontSize:13,outline:"none"}}/>
           <button onClick={addOtro} style={{padding:"10px 16px",borderRadius:12,background:"#7B2D8B",color:"#fff",border:"none",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+</button>
           <button onClick={()=>setShowOtro(false)} style={{padding:"10px",borderRadius:12,background:"#f0f0f8",border:"none",cursor:"pointer",fontFamily:"inherit"}}>x</button>
@@ -946,10 +950,12 @@ const SkillSelector = ({selected,onChange,label}) => {
   );
 };
 
-const Honorarios = ({value,moneda,onValue,onMoneda}) => (
+const Honorarios = ({value,moneda,onValue,onMoneda}) => {
+  const {lang} = useLang();
+  return (
   <div style={{marginBottom:18}}>
     <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:6}}>
-      Honorarios por hora
+      {lang==="en"?"Hourly rate":"Honorarios por hora"}
     </label>
     <div style={{display:"flex",gap:8,marginBottom:10}}>
       {["ARS","USD"].map(m=>(
@@ -958,7 +964,7 @@ const Honorarios = ({value,moneda,onValue,onMoneda}) => (
             border:moneda===m?"2px solid #1a1a2e":"2px solid #e0e0ef",
             background:moneda===m?"#1a1a2e":"#fff",
             color:moneda===m?"#fff":"#555",cursor:"pointer",fontFamily:"inherit"}}>
-          {m==="ARS"?"$ Pesos":"U$D Dólares"}
+          {m==="ARS"?(lang==="en"?"$ Pesos":"$ Pesos"):(lang==="en"?"U$D Dollars":"U$D Dólares")}
         </button>
       ))}
     </div>
@@ -971,23 +977,25 @@ const Honorarios = ({value,moneda,onValue,onMoneda}) => (
           border:"1.5px solid #e0e0ef",fontSize:22,fontWeight:800,color:"#1a1a2e",
           outline:"none",background:"#fff",boxSizing:"border-box"}}/>
     </div>
-    <div style={{fontSize:12,color:"#aaa",marginTop:6}}>Dejá en 0 si preferís no indicarlo</div>
+    <div style={{fontSize:12,color:"#aaa",marginTop:6}}>{lang==="en"?"Leave at 0 if you'd rather not specify":"Dejá en 0 si preferís no indicarlo"}</div>
   </div>
-);
+  );
+};
 
 const ObrasInput = ({obras,onChange}) => {
+  const {lang} = useLang();
   const [val,setVal] = useState("");
   const add = () => {if(val.trim()){onChange([...obras,val.trim()]);setVal("");}};
   return (
     <div style={{marginBottom:18}}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-        <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>Obras / trabajos destacados</label>
-        <span style={{fontSize:11,color:"#aaa"}}>Opcional</span>
+        <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>{lang==="en"?"Featured projects":"Obras / trabajos destacados"}</label>
+        <span style={{fontSize:11,color:"#aaa"}}>{lang==="en"?"Optional":"Opcional"}</span>
       </div>
       <div style={{display:"flex",gap:8,marginBottom:8}}>
         <input value={val} onChange={e=>setVal(e.target.value)}
           onKeyDown={e=>e.key==="Enter"&&add()}
-          placeholder="Ej: Torre Catalinas Norte 2023"
+          placeholder={lang==="en"?"E.g: Downtown Tower Project 2023":"Ej: Torre Catalinas Norte 2023"}
           style={{flex:1,padding:"11px 14px",borderRadius:12,border:"1.5px solid #e0e0ef",fontSize:13,outline:"none"}}/>
         <button onClick={add}
           style={{padding:"11px 18px",borderRadius:12,background:"#1a1a2e",color:"#fff",border:"none",fontWeight:700,cursor:"pointer",fontSize:18,fontFamily:"inherit"}}>
@@ -1026,6 +1034,7 @@ const G_ACCOUNTS = [
 ];
 
 const GooglePopup = ({onSelect,onClose}) => {
+  const {lang} = useLang();
   const [loading,setLoading] = useState(null);
   const pick = acc => {
     if(!acc.email) return;
@@ -1043,8 +1052,8 @@ const GooglePopup = ({onSelect,onClose}) => {
             <GLogo/>
             <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,color:"#666",cursor:"pointer",fontFamily:"inherit"}}>x</button>
           </div>
-          <div style={{fontWeight:700,fontSize:17,color:"#202124",marginTop:14,marginBottom:2}}>Acceder a Safy</div>
-          <div style={{fontSize:13,color:"#5f6368"}}>Elegí una cuenta para continuar</div>
+          <div style={{fontWeight:700,fontSize:17,color:"#202124",marginTop:14,marginBottom:2}}>{lang==="en"?"Sign in to Safy":"Acceder a Safy"}</div>
+          <div style={{fontSize:13,color:"#5f6368"}}>{lang==="en"?"Choose an account to continue":"Elegí una cuenta para continuar"}</div>
         </div>
         {G_ACCOUNTS.map(acc=>(
           <button key={acc.email||"otro"} onClick={()=>pick(acc)} disabled={loading!==null}
@@ -1058,7 +1067,7 @@ const GooglePopup = ({onSelect,onClose}) => {
               color:"#fff",fontWeight:700,fontSize:15,flexShrink:0}}>{acc.init}</div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:600,fontSize:14,color:"#202124",
-                whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{acc.name}</div>
+                whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{acc.email?acc.name:(lang==="en"?"Use another account":acc.name)}</div>
               {acc.email&&<div style={{fontSize:12,color:"#5f6368",
                 whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{acc.email}</div>}
             </div>
@@ -1070,7 +1079,7 @@ const GooglePopup = ({onSelect,onClose}) => {
         ))}
         <div style={{padding:"12px 24px 16px",borderTop:"1px solid #f0f0f0",
           display:"flex",justifyContent:"space-between"}}>
-          <span style={{fontSize:11,color:"#5f6368"}}>Español (Argentina)</span>
+          <span style={{fontSize:11,color:"#5f6368"}}>{lang==="en"?"English (United States)":"Español (Argentina)"}</span>
         </div>
       </div>
     </div>
@@ -1208,26 +1217,30 @@ const WelcomeScreen = ({onEntrar,onRegistrarse,visible=true}) => {
 const TOUR_PRO = [
   {
     tab: "swipe",
-    titulo: "Contactate con otros profesionales",
-    desc: "Deslizá las tarjetas hacia la derecha si te interesa conectar con ese profesional. Si la otra persona también te elige, ¡es un match! Izquierda para pasar.",
+    titulo: {es:"Contactate con otros profesionales", en:"Connect with other professionals"},
+    desc: {es:"Deslizá las tarjetas hacia la derecha si te interesa conectar con ese profesional. Si la otra persona también te elige, ¡es un match! Izquierda para pasar.",
+           en:"Swipe cards right if you're interested in connecting with that professional. If the other person picks you too, it's a match! Swipe left to pass."},
     icono: "🔍",
   },
   {
     tab: "feed",
-    titulo: "Oportunidades laborales",
-    desc: "Acá aparecen todas las búsquedas activas de empresas. Al postularte, la empresa evaluará tu perfil. Si les interesás, te contactarán directamente.",
+    titulo: {es:"Oportunidades laborales", en:"Job opportunities"},
+    desc: {es:"Acá aparecen todas las búsquedas activas de empresas. Al postularte, la empresa evaluará tu perfil. Si les interesás, te contactarán directamente.",
+           en:"All active company listings show up here. When you apply, the company reviews your profile. If they're interested, they'll contact you directly."},
     icono: "🏗️",
   },
   {
     tab: "matches",
-    titulo: "Tus conexiones con profesionales",
-    desc: "Cuando vos y otro profesional se eligen mutuamente, aparece acá con su contacto directo. Sin intermediarios.",
+    titulo: {es:"Tus conexiones con profesionales", en:"Your connections with professionals"},
+    desc: {es:"Cuando vos y otro profesional se eligen mutuamente, aparece acá con su contacto directo. Sin intermediarios.",
+           en:"When you and another professional pick each other, they show up here with their direct contact info. No middlemen."},
     icono: "🤝",
   },
   {
     tab: "perfil",
-    titulo: "Tu perfil público",
-    desc: "Las empresas ven esto antes de hacer match. Completá tu foto, descripción y skills para destacarte entre los demás profesionales.",
+    titulo: {es:"Tu perfil público", en:"Your public profile"},
+    desc: {es:"Las empresas ven esto antes de hacer match. Completá tu foto, descripción y skills para destacarte entre los demás profesionales.",
+           en:"Companies see this before matching. Fill in your photo, description and skills to stand out among other professionals."},
     icono: "👤",
   },
 ];
@@ -1235,31 +1248,36 @@ const TOUR_PRO = [
 const TOUR_EMP = [
   {
     tab: "mis_busquedas",
-    titulo: "Publicá búsquedas",
-    desc: "Tocá el botón \"+\" para publicar tu primera búsqueda. Los profesionales la verán y podrán postularse. Vos decidís a quién contactar.",
+    titulo: {es:"Publicá búsquedas", en:"Post listings"},
+    desc: {es:"Tocá el botón \"+\" para publicar tu primera búsqueda. Los profesionales la verán y podrán postularse. Vos decidís a quién contactar.",
+           en:"Tap the \"+\" button to post your first listing. Professionals will see it and can apply. You decide who to contact."},
     icono: "📋",
   },
   {
     tab: "swipe",
-    titulo: "Descubrí profesionales",
-    desc: "Explorá perfiles de profesionales SyH/MA disponibles cerca tuyo. Deslizá a la derecha para mostrar interés. Si el profesional también te elige, ¡es un match!",
+    titulo: {es:"Descubrí profesionales", en:"Discover professionals"},
+    desc: {es:"Explorá perfiles de profesionales SyH/MA disponibles cerca tuyo. Deslizá a la derecha para mostrar interés. Si el profesional también te elige, ¡es un match!",
+           en:"Browse profiles of available HSE professionals near you. Swipe right to show interest. If the professional picks you too, it's a match!"},
     icono: "🔍",
   },
   {
     tab: "matches",
-    titulo: "Tus conexiones con profesionales",
-    desc: "Cuando vos y un profesional se eligen mutuamente, aparece acá con su contacto directo — email y teléfono — para coordinar sin intermediarios.",
+    titulo: {es:"Tus conexiones con profesionales", en:"Your connections with professionals"},
+    desc: {es:"Cuando vos y un profesional se eligen mutuamente, aparece acá con su contacto directo — email y teléfono — para coordinar sin intermediarios.",
+           en:"When you and a professional pick each other, they show up here with their direct contact info — email and phone — to coordinate with no middlemen."},
     icono: "🤝",
   },
   {
     tab: "perfil",
-    titulo: "Perfil de tu empresa",
-    desc: "Los profesionales ven el perfil de tu empresa antes de hacer match. Completá los datos para generar confianza y atraer los mejores candidatos.",
+    titulo: {es:"Perfil de tu empresa", en:"Your company profile"},
+    desc: {es:"Los profesionales ven el perfil de tu empresa antes de hacer match. Completá los datos para generar confianza y atraer los mejores candidatos.",
+           en:"Professionals see your company profile before matching. Fill in the details to build trust and attract the best candidates."},
     icono: "🏢",
   },
 ];
 
 const TourContextual = ({rol, tabActual, setTab, onFin}) => {
+  const {lang} = useLang();
   const [paso, setPaso] = useState(0);
   const pasos = rol === "empresa" ? TOUR_EMP : TOUR_PRO;
   const p = pasos[paso];
@@ -1303,10 +1321,10 @@ const TourContextual = ({rol, tabActual, setTab, onFin}) => {
             }}>{p.icono}</div>
             <div>
               <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:.5,marginBottom:2}}>
-                Paso {paso+1} de {pasos.length}
+                {lang==="en"?`Step ${paso+1} of ${pasos.length}`:`Paso ${paso+1} de ${pasos.length}`}
               </div>
               <div style={{fontWeight:800,fontSize:15,color:"#1a1a2e",lineHeight:1.2}}>
-                {p.titulo}
+                {p.titulo[lang]}
               </div>
             </div>
           </div>
@@ -1322,7 +1340,7 @@ const TourContextual = ({rol, tabActual, setTab, onFin}) => {
         <p style={{
           fontSize:13,color:"#555",lineHeight:1.6,
           margin:"0 0 16px",
-        }}>{p.desc}</p>
+        }}>{p.desc[lang]}</p>
 
         {/* Barra de progreso */}
         <div style={{display:"flex",gap:4,marginBottom:14}}>
@@ -1343,7 +1361,7 @@ const TourContextual = ({rol, tabActual, setTab, onFin}) => {
             color:"#aaa",fontSize:12,fontWeight:600,cursor:"pointer",
             fontFamily:"inherit",
           }}>
-            Saltar tour
+            {lang==="en"?"Skip tour":"Saltar tour"}
           </button>
           <button onClick={siguiente} style={{
             flex:1,padding:"10px",borderRadius:12,
@@ -1351,7 +1369,7 @@ const TourContextual = ({rol, tabActual, setTab, onFin}) => {
             color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",
             fontFamily:"inherit",
           }}>
-            {esUltimo?"¡Listo! →":"Siguiente →"}
+            {esUltimo?(lang==="en"?"Done! →":"¡Listo! →"):(lang==="en"?"Next →":"Siguiente →")}
           </button>
         </div>
       </div>
@@ -1361,7 +1379,7 @@ const TourContextual = ({rol, tabActual, setTab, onFin}) => {
 
 // ─── PANTALLA SUSCRIPCIÓN ─────────────────────────────────────────────────────
 
-const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
+const PantallaSubscripcion = ({rol, onClose, authData, onIniciarCheckout}) => {
   const {t} = useLang();
   const [periodo, setPeriodo] = useState("mensual");
   const [loading, setLoading] = useState(false);
@@ -1376,11 +1394,15 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
   const handleStripe = () => {
     const link = STRIPE_LINKS[planKey];
     if(!link) { alert(t("plan_no_encontrado")); return; }
-    // Agregar email y URL de retorno al link
+    // NOTA: los Payment Links de Stripe (a diferencia de los Checkout Sessions
+    // creados por API) no soportan un "success_url" pasado por query param —
+    // Stripe lo ignora en silencio. Por eso el retorno a la app no depende de
+    // ninguna URL de redirect: abrimos el checkout en una ventana secundaria y
+    // la pestaña principal confirma sola (polling) apenas el webhook activa el
+    // plan, cerrando el popup automáticamente.
     const url = link + "?prefilled_email=" + encodeURIComponent(authData?.email||"") +
-      "&client_reference_id=" + (authData?.user?.id||"") +
-      "&success_url=" + encodeURIComponent(window.location.origin + "?sub=ok&plan=" + planKey);
-    window.location.href = url;
+      "&client_reference_id=" + (authData?.user?.id||"");
+    onIniciarCheckout(url);
   };
 
   return (
@@ -1473,7 +1495,7 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 
 const LoginScreen = ({onLogin,isRegistro}) => {
-  const {t} = useLang();
+  const {t,lang} = useLang();
   const [mode,setMode] = useState("main");
   const [email,setEmail] = useState("");
   const [password,setPassword] = useState("");
@@ -1539,7 +1561,7 @@ const LoginScreen = ({onLogin,isRegistro}) => {
       <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:4}}>{isRegistro?t("login_email_title_register"):t("login_email_title_login")}</div>
       <div style={{color:"#888",fontSize:13,marginBottom:24}}>{isRegistro?t("login_email_sub_register"):t("login_email_sub_login")}</div>
       <Inp label="Email" type="email" placeholder="tucorreo@gmail.com" value={email} onChange={setEmail}/>
-      <Inp label="Contraseña" type="password" placeholder={isRegistro?t("login_password_min"):t("login_password_placeholder")} value={password} onChange={setPassword}/>
+      <Inp label={lang==="en"?"Password":"Contraseña"} type="password" placeholder={isRegistro?t("login_password_min"):t("login_password_placeholder")} value={password} onChange={setPassword}/>
       {error&&<div style={{background:"#fdecea",borderRadius:10,padding:"10px 14px",marginBottom:12,fontSize:13,color:"#E63946",fontWeight:600}}>{error}</div>}
       <Btn onClick={handleEmail} disabled={loading||!email.includes("@")||!password}>
         {loading?t("login_processing"):(isRegistro?t("login_title_register"):t("login_title_login"))}
@@ -1610,13 +1632,20 @@ const OBHead = ({step,total,onBack}) => (
 
 // ─── TOGGLE SEGURO ────────────────────────────────────────────────────────────
 const ToggleSeguro = ({pais, value, onChange, esOferta=false}) => {
+  const {lang} = useLang();
   const nombreSeguro = getSeguro(pais||"AR");
-  const opSi  = esOferta ? "Si, se ofrece cobertura" : "Si, tengo cobertura";
-  const opNo  = esOferta ? "No se ofrece cobertura"  : "No tengo cobertura";
+  const opSi  = esOferta
+    ? (lang==="en"?"Yes, coverage is offered":"Si, se ofrece cobertura")
+    : (lang==="en"?"Yes, I have coverage":"Si, tengo cobertura");
+  const opNo  = esOferta
+    ? (lang==="en"?"No coverage offered":"No se ofrece cobertura")
+    : (lang==="en"?"I don't have coverage":"No tengo cobertura");
   return (
     <div style={{marginBottom:18}}>
       <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:4}}>
-        {esOferta ? "Esta oferta incluye cobertura de seguro" : "Cobertura de seguro"}
+        {esOferta
+          ? (lang==="en"?"This listing includes insurance coverage":"Esta oferta incluye cobertura de seguro")
+          : (lang==="en"?"Insurance coverage":"Cobertura de seguro")}
       </label>
       <div style={{fontSize:12,color:"#888",marginBottom:10}}>{nombreSeguro}</div>
       <div style={{display:"flex",gap:10}}>
@@ -1639,15 +1668,15 @@ const ToggleSeguro = ({pais, value, onChange, esOferta=false}) => {
       {value===false&&(
         <div style={{marginTop:8,fontSize:11,color:"#E63946",lineHeight:1.4}}>
           {esOferta
-            ? "Muchos profesionales priorizan ofertas con cobertura."
-            : "Muchas empresas exigen cobertura. Te recomendamos obtenerla."}
+            ? (lang==="en"?"Many professionals prioritize listings with coverage.":"Muchos profesionales priorizan ofertas con cobertura.")
+            : (lang==="en"?"Many companies require coverage. We recommend getting it.":"Muchas empresas exigen cobertura. Te recomendamos obtenerla.")}
         </div>
       )}
       {value===true&&(
         <div style={{marginTop:8,fontSize:11,color:"#2A9D8F",lineHeight:1.4}}>
           {esOferta
-            ? "Especificalo en el contrato con el profesional."
-            : "Tene la poliza vigente y a disposicion del contratante."}
+            ? (lang==="en"?"Specify it in the contract with the professional.":"Especificalo en el contrato con el profesional.")
+            : (lang==="en"?"Keep your policy active and available to whoever hires you.":"Tene la poliza vigente y a disposicion del contratante.")}
         </div>
       )}
     </div>
@@ -1663,19 +1692,23 @@ const ESTADOS_LIST = [
   {k:"descartado", label:"Descartado",  color:"#E63946", bg:"#fdecea", icon:"❌"},
 ];
 const getEstado = function(k){ return ESTADOS_LIST.find(function(e){return e.k===k;})||ESTADOS_LIST[0]; };
+const ESTADOS_LABEL_EN = {pendiente:"Pending", visto:"Seen", proceso:"In progress", contratado:"Hired", descartado:"Discarded"};
+const labelEstado = (e, lang) => lang==="en" ? (ESTADOS_LABEL_EN[e.k]||e.label) : e.label;
 
 const BadgeEstado = ({estado}) => {
+  const {lang} = useLang();
   var e = getEstado(estado||"pendiente");
   return (
     <span style={{display:"inline-flex",alignItems:"center",gap:4,
       background:e.bg,color:e.color,padding:"3px 10px",borderRadius:99,
       fontSize:11,fontWeight:700}}>
-      {e.icon} {e.label}
+      {e.icon} {labelEstado(e, lang)}
     </span>
   );
 };
 
 const SelectorEstado = ({estado, onChange}) => {
+  const {lang} = useLang();
   const [open, setOpen] = useState(false);
   var e = getEstado(estado||"pendiente");
   return (
@@ -1685,7 +1718,7 @@ const SelectorEstado = ({estado, onChange}) => {
           background:e.bg,color:e.color,border:"1.5px solid rgba(0,0,0,0.1)",
           padding:"6px 10px",borderRadius:99,fontSize:11,fontWeight:700,
           cursor:"pointer",fontFamily:"inherit"}}>
-        {e.icon} {e.label} ▾
+        {e.icon} {labelEstado(e, lang)} ▾
       </button>
       {open&&(
         <div style={{position:"absolute",bottom:"110%",left:0,background:"#fff",
@@ -1701,7 +1734,7 @@ const SelectorEstado = ({estado, onChange}) => {
                   color:op.color,
                   fontWeight:(estado||"pendiente")===op.k?700:500,
                   fontSize:12,cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>
-                {op.icon} {op.label}
+                {op.icon} {labelEstado(op, lang)}
               </button>
             );
           })}
@@ -1726,11 +1759,13 @@ const BadgeVerificado = ({size=16}) => (
 // el Plan Pro real (Stripe). `verificado` acá es simplemente `esPro`. Si el
 // usuario no es Pro, el botón lleva directo al paywall real (mismo copy que
 // "Descubrí Safy Pro" en el resto de la app, sin mostrar precio de entrada).
-const VerificacionSection = ({verificado, onDescubrirPro, esEmpresa=false}) => (
+const VerificacionSection = ({verificado, onDescubrirPro, esEmpresa=false}) => {
+  const {lang} = useLang();
+  return (
   <div style={{marginBottom:16}}>
     <div style={{fontSize:12,fontWeight:700,color:"#aaa",textTransform:"uppercase",
       letterSpacing:.5,marginBottom:10}}>
-      Verificación profesional
+      {lang==="en"?"Professional verification":"Verificación profesional"}
     </div>
     {verificado?(
       <div style={{background:"#e8f4ff",borderRadius:14,padding:"12px 16px",
@@ -1738,10 +1773,10 @@ const VerificacionSection = ({verificado, onDescubrirPro, esEmpresa=false}) => (
         <BadgeVerificado size={16}/>
         <div style={{flex:1}}>
           <div style={{fontWeight:700,fontSize:13,color:"#1D9BF0"}}>
-            {esEmpresa?"Empresa Verificada":"Profesional Verificado"}
+            {esEmpresa?(lang==="en"?"Verified Company":"Empresa Verificada"):(lang==="en"?"Verified Professional":"Profesional Verificado")}
           </div>
           <div style={{fontSize:11,color:"#5b9bd5"}}>
-            Incluido en tu Plan Pro
+            {lang==="en"?"Included in your Pro Plan":"Incluido en tu Plan Pro"}
           </div>
         </div>
       </div>
@@ -1752,17 +1787,34 @@ const VerificacionSection = ({verificado, onDescubrirPro, esEmpresa=false}) => (
           cursor:"pointer",fontFamily:"inherit",
           display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
         <BadgeVerificado size={15}/>
-        Descubrí Safy Pro
+        {lang==="en"?"Discover Safy Pro":"Descubrí Safy Pro"}
       </button>
     )}
   </div>
-);
+  );
+};
 
 // ─── MODAL LEGAL ──────────────────────────────────────────────────────────────
 const ModalLegal = ({tipo, onClose}) => {
+  const {lang} = useLang();
   var esTyC = tipo==="terminos";
-  var titulo = esTyC?"Terminos y Condiciones":"Politica de Privacidad";
-  var items = esTyC ? [
+  var titulo = lang==="en"
+    ? (esTyC?"Terms and Conditions":"Privacy Policy")
+    : (esTyC?"Terminos y Condiciones":"Politica de Privacidad");
+  var items = lang==="en" ? (esTyC ? [
+    {t:"1. Service description", c:"Safy is a professional-connection platform in HSE/Environment. It acts as a technology intermediary and is NOT an employment agency and does not guarantee contracts."},
+    {t:"2. User responsibility", c:"The user declares that their profile is truthful. Safy does not verify degrees or professional licenses."},
+    {t:"3. Limitation of liability", c:"Safy is NOT responsible for non-payment, breach of contract, workplace accidents, unethical conduct, or damages between users."},
+    {t:"4. Hiring", c:"Agreements are the responsibility of the parties involved. Companies must validate credentials before hiring."},
+    {t:"5. Applicable law", c:"Argentine law applies. Jurisdiction: courts of the City of Buenos Aires (CABA). Contact: legal@safyjobs.com"},
+  ] : [
+    {t:"1. Data we collect", c:"Name, email, phone, photo, location, degree, experience, skills and description. Also usage and geolocation data."},
+    {t:"2. What we use your data for", c:"To create your profile, connect you based on location, send you notifications and improve the Platform."},
+    {t:"3. What other users see", c:"Name, photo, degree, city and skills. Your email and phone are only shared once you match."},
+    {t:"4. We don't sell your data", c:"Safy does not sell data to third parties. Only with providers under confidentiality agreements."},
+    {t:"5. Your rights", c:"You can access, rectify and delete your data. When you delete your account, your data is erased within 30 business days."},
+    {t:"6. Applicable law", c:"Law 25,326 (Argentina), GDPR (Spain). Contact: privacidad@safyjobs.com"},
+  ]) : (esTyC ? [
     {t:"1. Descripcion del servicio", c:"Safy es una plataforma de conexion profesional en SyH/MA. Actua como intermediario tecnologico y NO es una agencia de empleo ni garantiza contratos."},
     {t:"2. Responsabilidad del usuario", c:"El usuario declara que su perfil es veraz. Safy no verifica titulos ni matriculas."},
     {t:"3. Limitacion de responsabilidad", c:"Safy NO se responsabiliza por falta de pago, incumplimientos contractuales, accidentes laborales, conductas antieticas ni danos entre usuarios."},
@@ -1775,7 +1827,7 @@ const ModalLegal = ({tipo, onClose}) => {
     {t:"4. No vendemos tus datos", c:"Safy no vende datos a terceros. Solo con proveedores bajo acuerdos de confidencialidad."},
     {t:"5. Tus derechos", c:"Podes acceder, rectificar y eliminar tus datos. Al eliminar tu cuenta, los datos se borran en 30 dias habiles."},
     {t:"6. Ley aplicable", c:"Ley 25.326 (Argentina), RGPD (Espana). Contacto: privacidad@safyjobs.com"},
-  ];
+  ]);
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(26,26,46,0.92)",zIndex:3000,
       display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
@@ -1801,7 +1853,7 @@ const ModalLegal = ({tipo, onClose}) => {
           <button onClick={onClose}
             style={{width:"100%",padding:14,borderRadius:14,border:"none",background:"#1a1a2e",
               color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
-            Entendido
+            {lang==="en"?"Got it":"Entendido"}
           </button>
         </div>
       </div>
@@ -1833,6 +1885,7 @@ const TermsBar = () => {
 
 // ─── ACEPTACION LEGAL ─────────────────────────────────────────────────────────
 const AceptacionLegal = ({onConfirm}) => {
+  const {lang} = useLang();
   const [acepta, setAcepta] = useState(false);
   const [modalTipo, setModalTipo] = useState(null);
   const [intento, setIntento] = useState(false);
@@ -1851,35 +1904,36 @@ const AceptacionLegal = ({onConfirm}) => {
             {acepta?"✓":""}
           </button>
           <div style={{fontSize:13,color:"#444",lineHeight:1.6}}>
-            He leido y acepto los{" "}
+            {lang==="en"?"I have read and accept the":"He leido y acepto los"}{" "}
             <button onClick={function(){setModalTipo("terminos");}}
               style={{background:"none",border:"none",color:"#1a1a2e",fontWeight:700,
                 fontSize:13,cursor:"pointer",textDecoration:"underline",fontFamily:"inherit",padding:0}}>
-              Terminos y Condiciones
+              {lang==="en"?"Terms and Conditions":"Terminos y Condiciones"}
             </button>
-            {" "}y la{" "}
+            {lang==="en"?" and the":" y la"}{" "}
             <button onClick={function(){setModalTipo("privacidad");}}
               style={{background:"none",border:"none",color:"#1a1a2e",fontWeight:700,
                 fontSize:13,cursor:"pointer",textDecoration:"underline",fontFamily:"inherit",padding:0}}>
-              Politica de Privacidad
+              {lang==="en"?"Privacy Policy":"Politica de Privacidad"}
             </button>
           </div>
         </div>
         {intento&&!acepta&&(
           <div style={{fontSize:12,color:"#E63946",marginTop:8,marginLeft:36,fontWeight:600}}>
-            Debes aceptar los terminos para continuar.
+            {lang==="en"?"You must accept the terms to continue.":"Debes aceptar los terminos para continuar."}
           </div>
         )}
       </div>
       <div style={{fontSize:11,color:"#aaa",marginBottom:16,lineHeight:1.5}}>
-        Tu aceptacion digital tiene validez legal (Ley 25.506).
+        {lang==="en"?"Your digital acceptance has legal validity (Law 25,506).":"Tu aceptacion digital tiene validez legal (Ley 25.506)."}
       </div>
-      <Btn onClick={function(){if(!acepta){setIntento(true);return;}onConfirm();}}>Entrar a Safy!</Btn>
+      <Btn onClick={function(){if(!acepta){setIntento(true);return;}onConfirm();}}>{lang==="en"?"Enter Safy!":"Entrar a Safy!"}</Btn>
     </div>
   );
 };
 
 const StepPro1 = ({data,set,onNext}) => {
+  const {lang} = useLang();
   const [foto,setFoto] = useState(data.foto||"");
   const [n,setN] = useState(data.nombre||"");
   const [ap,setAp] = useState(data.apellido||"");
@@ -1904,7 +1958,7 @@ const StepPro1 = ({data,set,onNext}) => {
         try {
           const {latitude,longitude} = pos.coords;
           setCoords({lat:latitude,lng:longitude});
-          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=es`);
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=${lang}`);
           const d = await r.json();
           const addr = d.address || {};
           // Mapear país
@@ -1923,14 +1977,14 @@ const StepPro1 = ({data,set,onNext}) => {
   },[]);
 
   const detectarManual = () => {
-    if(!navigator.geolocation) { setGeoError("Tu navegador no soporta geolocalización"); return; }
+    if(!navigator.geolocation) { setGeoError(lang==="en"?"Your browser doesn't support geolocation":"Tu navegador no soporta geolocalización"); return; }
     setGeoLoading(true); setGeoError("");
     navigator.geolocation.getCurrentPosition(
       async pos => {
         try {
           const {latitude,longitude} = pos.coords;
           setCoords({lat:latitude,lng:longitude});
-          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=es`);
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=${lang}`);
           const d = await r.json();
           const addr = d.address || {};
           const countryCode = (addr.country_code||"").toUpperCase();
@@ -1939,11 +1993,11 @@ const StepPro1 = ({data,set,onNext}) => {
           const provincia = addr.state || addr.region || "";
           const ciudad = addr.city || addr.town || addr.village || addr.municipality || "";
           if(ciudad) { setGeo({pais, provincia, ciudad}); }
-          else { setGeoError("No pudimos detectar tu ciudad. Completá manualmente."); }
-        } catch(e) { setGeoError("Error al obtener ubicación. Completá manualmente."); }
+          else { setGeoError(lang==="en"?"We couldn't detect your city. Fill it in manually.":"No pudimos detectar tu ciudad. Completá manualmente."); }
+        } catch(e) { setGeoError(lang==="en"?"Error getting location. Fill it in manually.":"Error al obtener ubicación. Completá manualmente."); }
         setGeoLoading(false);
       },
-      () => { setGeoError("Permiso denegado. Completá tu ubicación manualmente."); setGeoLoading(false); },
+      () => { setGeoError(lang==="en"?"Permission denied. Fill in your location manually.":"Permiso denegado. Completá tu ubicación manualmente."); setGeoLoading(false); },
       {timeout:8000}
     );
   };
@@ -1952,23 +2006,23 @@ const StepPro1 = ({data,set,onNext}) => {
 
   return (
     <div style={{padding:"24px 20px 32px"}}>
-      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Tus datos personales</div>
-      <div style={{color:"#888",fontSize:13,marginBottom:12}}>Aparecerán en tu perfil público</div>
+      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>{lang==="en"?"Your personal info":"Tus datos personales"}</div>
+      <div style={{color:"#888",fontSize:13,marginBottom:12}}>{lang==="en"?"This will show on your public profile":"Aparecerán en tu perfil público"}</div>
       {(data.nombre||data.email)&&(
         <div style={{background:"#f0fdf4",borderRadius:12,padding:"10px 14px",marginBottom:16,
           border:"1.5px solid #86efac",display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:18}}>🔗</span>
           <div style={{fontSize:12,color:"#15803d",fontWeight:600,lineHeight:1.4}}>
-            Datos pre-completados desde tu cuenta Google.<br/>
-            <span style={{fontWeight:400,color:"#166534"}}>Revisá y editá lo que necesites.</span>
+            {lang==="en"?"Info pre-filled from your Google account.":"Datos pre-completados desde tu cuenta Google."}<br/>
+            <span style={{fontWeight:400,color:"#166534"}}>{lang==="en"?"Review and edit whatever you need.":"Revisá y editá lo que necesites."}</span>
           </div>
         </div>
       )}
       <FotoPicker foto={foto} onFoto={setFoto} color="#1a1a2e" init={init} size={80}/>
-      <Inp label="Nombre *" placeholder="Ej: Gustavo" value={n} onChange={setN}/>
-      <Inp label="Apellido *" placeholder="Ej: De Rose" value={ap} onChange={setAp}/>
-      <Inp label="Email" optional type="email" placeholder="tucorreo@gmail.com" value={em} onChange={setEm}/>
-      <Inp label="Teléfono" optional type="tel" placeholder="+54 9 11..." value={tel} onChange={setTel}/>
+      <Inp label={lang==="en"?"First name *":"Nombre *"} placeholder={lang==="en"?"E.g: Gustavo":"Ej: Gustavo"} value={n} onChange={setN}/>
+      <Inp label={lang==="en"?"Last name *":"Apellido *"} placeholder={lang==="en"?"E.g: De Rose":"Ej: De Rose"} value={ap} onChange={setAp}/>
+      <Inp label="Email" optional type="email" placeholder="youremail@gmail.com" value={em} onChange={setEm}/>
+      <Inp label={lang==="en"?"Phone":"Teléfono"} optional type="tel" placeholder="+54 9 11..." value={tel} onChange={setTel}/>
 
       {/* Geolocalización */}
       {geoLoading ? (
@@ -1976,7 +2030,7 @@ const StepPro1 = ({data,set,onNext}) => {
           display:"flex",alignItems:"center",gap:10,border:"1.5px solid #86efac"}}>
           <div style={{width:16,height:16,borderRadius:"50%",border:"2px solid #86efac",
             borderTopColor:"#2A9D8F",animation:"spin .7s linear infinite",flexShrink:0}}/>
-          <span style={{fontSize:13,color:"#15803d",fontWeight:600}}>Detectando tu ubicación...</span>
+          <span style={{fontSize:13,color:"#15803d",fontWeight:600}}>{lang==="en"?"Detecting your location...":"Detectando tu ubicación..."}</span>
         </div>
       ) : geo.ciudad ? (
         <div style={{background:"#f0fdf4",borderRadius:12,padding:"10px 14px",marginBottom:8,
@@ -1984,7 +2038,7 @@ const StepPro1 = ({data,set,onNext}) => {
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:16}}>📍</span>
             <div>
-              <div style={{fontSize:12,color:"#15803d",fontWeight:700}}>Ubicación detectada</div>
+              <div style={{fontSize:12,color:"#15803d",fontWeight:700}}>{lang==="en"?"Location detected":"Ubicación detectada"}</div>
               <div style={{fontSize:12,color:"#166534"}}>{[geo.ciudad,geo.provincia,PAISES.find(p=>p.v===geo.pais)?.l].filter(Boolean).join(", ")}</div>
             </div>
           </div>
@@ -1997,7 +2051,7 @@ const StepPro1 = ({data,set,onNext}) => {
             background:"transparent",color:"#2A9D8F",fontWeight:600,fontSize:13,
             cursor:"pointer",marginBottom:8,fontFamily:"inherit",display:"flex",
             alignItems:"center",justifyContent:"center",gap:8}}>
-          📍 Detectar mi ubicación automáticamente
+          📍 {lang==="en"?"Detect my location automatically":"Detectar mi ubicación automáticamente"}
         </button>
       )}
       {geoError&&<div style={{fontSize:12,color:"#E63946",marginBottom:8}}>{geoError}</div>}
@@ -2006,7 +2060,7 @@ const StepPro1 = ({data,set,onNext}) => {
       {/* Slider de radio */}
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>Radio de trabajo</label>
+          <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>{lang==="en"?"Work radius":"Radio de trabajo"}</label>
           <span style={{fontSize:14,fontWeight:800,color:"#1a1a2e",background:"#f0f0f8",
             padding:"3px 10px",borderRadius:99}}>{ra} km</span>
         </div>
@@ -2020,21 +2074,25 @@ const StepPro1 = ({data,set,onNext}) => {
         </div>
       </div>
 
-      <Btn onClick={next} disabled={!ok}>Continuar</Btn>
+      <Btn onClick={next} disabled={!ok}>{lang==="en"?"Continue":"Continuar"}</Btn>
     </div>
   );
 };
 
 const StepPro2 = ({data,set,onNext}) => {
+  const {lang} = useLang();
   const [tit,setTit] = useState(data.titulo||"");
   const [titMA,setTitMA] = useState(data.tituloMA||"");
   const [exp,setExp] = useState(data.experiencia||"");
   const [desc,setDesc] = useState(data.descripcion||"");
   const pais = data.pais||"AR";
   const t = getT(pais);
+  // NOTA: los nombres de títulos/disciplinas (t.disciplina, t.abrev) varían por
+  // PAÍS (AR/ES/BR usan terminología oficial distinta), no por idioma de la UI
+  // — se mantienen tal cual; es una localización aparte de la del idioma ES/EN.
   const opsSyH = [
-    {v:"",          l:"Seleccioná tu título..."},
-    {v:"no_aplica", l:"No aplica"},
+    {v:"",          l:lang==="en"?"Select your degree...":"Seleccioná tu título..."},
+    {v:"no_aplica", l:lang==="en"?"Not applicable":"No aplica"},
     {v:"est_syh",   l:"Estudiante en "+t.disciplina},
     {v:"tec_syh",   l:"Técnico en "+t.disciplina},
     {v:"aud_syh",   l:"Auditor en "+t.disciplina},
@@ -2053,14 +2111,14 @@ const StepPro2 = ({data,set,onNext}) => {
     return a.l.length - b.l.length; // resto por longitud
   });
   const opsMA = [
-    {v:"",          l:"Sin título en Medio Ambiente (opcional)"},
-    {v:"no_aplica", l:"No aplica"},
-    {v:"est_ma",    l:"Estudiante en Ciencias Ambientales"},
-    {v:"tec_ma",    l:"Técnico en Medio Ambiente"},
-    {v:"aud_ma",    l:"Auditor Ambiental"},
-    {v:"gest_ma",   l:"Gestor Ambiental"},
-    {v:"lic_ma",    l:"Licenciado en Ciencias Ambientales"},
-    {v:"ing_ma",    l:"Ingeniero Ambiental"},
+    {v:"",          l:lang==="en"?"No Environment degree (optional)":"Sin título en Medio Ambiente (opcional)"},
+    {v:"no_aplica", l:lang==="en"?"Not applicable":"No aplica"},
+    {v:"est_ma",    l:lang==="en"?"Student in Environmental Sciences":"Estudiante en Ciencias Ambientales"},
+    {v:"tec_ma",    l:lang==="en"?"Environmental Technician":"Técnico en Medio Ambiente"},
+    {v:"aud_ma",    l:lang==="en"?"Environmental Auditor":"Auditor Ambiental"},
+    {v:"gest_ma",   l:lang==="en"?"Environmental Manager":"Gestor Ambiental"},
+    {v:"lic_ma",    l:lang==="en"?"Environmental Sciences Graduate":"Licenciado en Ciencias Ambientales"},
+    {v:"ing_ma",    l:lang==="en"?"Environmental Engineer":"Ingeniero Ambiental"},
   ].sort((a,b) => {
     if(!a.v) return -1;
     if(!b.v) return 1;
@@ -2071,50 +2129,53 @@ const StepPro2 = ({data,set,onNext}) => {
   const next = () => { set({...data,titulo:tit,tituloMA:titMA,experiencia:exp,descripcion:desc}); onNext(); };
   return (
     <div style={{padding:"24px 20px 32px"}}>
-      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Tu perfil profesional</div>
-      <div style={{color:"#888",fontSize:13,marginBottom:20}}>Lo primero que ven las empresas</div>
+      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>{lang==="en"?"Your professional profile":"Tu perfil profesional"}</div>
+      <div style={{color:"#888",fontSize:13,marginBottom:20}}>{lang==="en"?"The first thing companies see":"Lo primero que ven las empresas"}</div>
 
       <Sel
-        label={"Título en " + t.disciplina + " *"}
-        hint={"Seleccioná tu habilitación en " + t.abrev}
+        label={(lang==="en"?"Degree in ":"Título en ") + t.disciplina + " *"}
+        hint={(lang==="en"?"Select your qualification in ":"Seleccioná tu habilitación en ") + t.abrev}
         value={tit}
         onChange={setTit}
         options={opsSyH}/>
 
       <Sel
-        label="Título en Medio Ambiente"
-        hint="Si también tenés formación ambiental"
+        label={lang==="en"?"Environment degree":"Título en Medio Ambiente"}
+        hint={lang==="en"?"If you also have environmental training":"Si también tenés formación ambiental"}
         optional
         value={titMA}
         onChange={setTitMA}
         options={opsMA}/>
 
-      <Sel label="Años de experiencia" optional value={exp} onChange={setExp}
-        options={[{v:"",l:"Seleccioná..."},{v:"<1",l:"Menos de 1 año"},{v:"1-3",l:"1 a 3 años"},
-          {v:"3-5",l:"3 a 5 años"},{v:"5-10",l:"5 a 10 años"},{v:">10",l:"Más de 10 años"}]}/>
+      <Sel label={lang==="en"?"Years of experience":"Años de experiencia"} optional value={exp} onChange={setExp}
+        options={[{v:"",l:lang==="en"?"Select...":"Seleccioná..."},{v:"<1",l:lang==="en"?"Less than 1 year":"Menos de 1 año"},{v:"1-3",l:lang==="en"?"1 to 3 years":"1 a 3 años"},
+          {v:"3-5",l:lang==="en"?"3 to 5 years":"3 a 5 años"},{v:"5-10",l:lang==="en"?"5 to 10 years":"5 a 10 años"},{v:">10",l:lang==="en"?"More than 10 years":"Más de 10 años"}]}/>
 
-      <Txt label="Descripción breve" optional value={desc} onChange={setDesc}
-        hint="Máximo 3 oraciones."
-        example="Licenciado en SyH con 5 años en obras de construcción en CABA. Especializado en trabajos en altura y APT."/>
+      <Txt label={lang==="en"?"Brief description":"Descripción breve"} optional value={desc} onChange={setDesc}
+        hint={lang==="en"?"Maximum 3 sentences.":"Máximo 3 oraciones."}
+        example={lang==="en"
+          ?"HSE graduate with 5 years on construction sites in Miami. Specialized in work-at-height and JSA."
+          :"Licenciado en SyH con 5 años en obras de construcción en CABA. Especializado en trabajos en altura y APT."}/>
 
-      <Btn onClick={next} disabled={!tit&&!titMA}>Continuar</Btn>
+      <Btn onClick={next} disabled={!tit&&!titMA}>{lang==="en"?"Continue":"Continuar"}</Btn>
     </div>
   );
 };
 
 const StepPro3 = ({data,set,onNext}) => {
+  const {lang} = useLang();
   const [skills,setSkills] = useState(data.skills||[]);
   const [sectores,setSectores] = useState(data.sectores||[]);
   const [obras,setObras] = useState(data.obras||[]);
   const next = () => { set({...data,skills,sectores,obras}); onNext(); };
   return (
     <div style={{padding:"24px 20px 32px"}}>
-      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Habilidades y experiencia</div>
-      <div style={{color:"#888",fontSize:13,marginBottom:20}}>Elegí al menos 2 skills</div>
-      <SkillSelector label="Skills principales" selected={skills} onChange={setSkills}/>
+      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>{lang==="en"?"Skills and experience":"Habilidades y experiencia"}</div>
+      <div style={{color:"#888",fontSize:13,marginBottom:20}}>{lang==="en"?"Choose at least 2 skills":"Elegí al menos 2 skills"}</div>
+      <SkillSelector label={lang==="en"?"Main skills":"Skills principales"} selected={skills} onChange={setSkills}/>
       <div style={{marginBottom:18}}>
         <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
-          Sectores <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+          {lang==="en"?"Sectors":"Sectores"} <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>{lang==="en"?"Optional":"Opcional"}</span>
         </label>
         <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
           {SECTORES.map(s=>(
@@ -2126,12 +2187,13 @@ const StepPro3 = ({data,set,onNext}) => {
         </div>
       </div>
       <ObrasInput obras={obras} onChange={setObras}/>
-      <Btn onClick={next} disabled={skills.length<2}>Continuar</Btn>
+      <Btn onClick={next} disabled={skills.length<2}>{lang==="en"?"Continue":"Continuar"}</Btn>
     </div>
   );
 };
 
 const StepPro4 = ({data,set,onNext}) => {
+  const {lang} = useLang();
   const [disp,setDisp] = useState(data.disponibilidad||"");
   const [dias,setDias] = useState(data.dias||[]);
   const [modal,setModal] = useState(data.modalidad||"");
@@ -2142,13 +2204,13 @@ const StepPro4 = ({data,set,onNext}) => {
   const next = () => { set({...data,disponibilidad:disp,dias,modalidad:modal,tarifa,moneda,horario:hor,seguro}); onNext(); };
   return (
     <div style={{padding:"24px 20px 32px"}}>
-      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Disponibilidad y honorarios</div>
-      <div style={{color:"#888",fontSize:13,marginBottom:20}}>Las empresas verán estos datos</div>
+      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>{lang==="en"?"Availability and rates":"Disponibilidad y honorarios"}</div>
+      <div style={{color:"#888",fontSize:13,marginBottom:20}}>{lang==="en"?"Companies will see this info":"Las empresas verán estos datos"}</div>
       <div style={{marginBottom:18}}>
-        <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:10}}>Estado *</label>
-        {[{v:"disponible",e:"Disponible ahora",d:"Aparecés primero en resultados"},
-          {v:"parcial",e:"Disponibilidad parcial",d:"Acepto proyectos puntuales"},
-          {v:"no",e:"No disponible",d:"Podés cambiarlo cuando quieras"}].map(({v,e,d})=>(
+        <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:10}}>{lang==="en"?"Status *":"Estado *"}</label>
+        {[{v:"disponible",e:lang==="en"?"Available now":"Disponible ahora",d:lang==="en"?"You show up first":"Aparecés primero en resultados"},
+          {v:"parcial",e:lang==="en"?"Partially available":"Disponibilidad parcial",d:lang==="en"?"I take one-off projects":"Acepto proyectos puntuales"},
+          {v:"no",e:lang==="en"?"Not available":"No disponible",d:lang==="en"?"You can change this anytime":"Podés cambiarlo cuando quieras"}].map(({v,e,d})=>(
           <button key={v} onClick={()=>setDisp(v)}
             style={{display:"flex",width:"100%",marginBottom:8,
               background:disp===v?"#f8f8fc":"#fff",
@@ -2163,30 +2225,31 @@ const StepPro4 = ({data,set,onNext}) => {
       </div>
       <div style={{marginBottom:18}}>
         <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
-          Días disponibles <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+          {lang==="en"?"Days available":"Días disponibles"} <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>{lang==="en"?"Optional":"Opcional"}</span>
         </label>
         <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
           {DIAS.map(d=>(
             <Chip key={d} selected={dias.includes(d)}
               onClick={()=>setDias(c=>c.includes(d)?c.filter(x=>x!==d):[...c,d])}>
-              {d}
+              {lang==="en"?DIAS_LABEL_EN[d]:d}
             </Chip>
           ))}
         </div>
       </div>
-      <Sel label="Modalidad" optional value={modal} onChange={setModal}
-        options={[{v:"",l:"Seleccioná..."},{v:"puntual",l:"Obra / trabajo puntual"},
-          {v:"part",l:"Part-time"},{v:"full",l:"Full-time / dependencia"},
-          {v:"cualquiera",l:"Cualquier modalidad"}]}/>
+      <Sel label={lang==="en"?"Work mode":"Modalidad"} optional value={modal} onChange={setModal}
+        options={[{v:"",l:lang==="en"?"Select...":"Seleccioná..."},{v:"puntual",l:lang==="en"?"One-off project":"Obra / trabajo puntual"},
+          {v:"part",l:"Part-time"},{v:"full",l:lang==="en"?"Full-time / employed":"Full-time / dependencia"},
+          {v:"cualquiera",l:lang==="en"?"Any work mode":"Cualquier modalidad"}]}/>
       <Honorarios value={tarifa} moneda={moneda} onValue={setTarifa} onMoneda={setMoneda}/>
-      <Inp label="Horario" optional placeholder="Ej: Lunes a viernes 8 a 17 hs" value={hor} onChange={setHor}/>
+      <Inp label={lang==="en"?"Schedule":"Horario"} optional placeholder={lang==="en"?"E.g: Monday to Friday 8 to 5":"Ej: Lunes a viernes 8 a 17 hs"} value={hor} onChange={setHor}/>
       <ToggleSeguro pais={data.pais} value={seguro} onChange={setSeguro}/>
-      <Btn onClick={next} disabled={!disp}>Ver resumen</Btn>
+      <Btn onClick={next} disabled={!disp}>{lang==="en"?"See summary":"Ver resumen"}</Btn>
     </div>
   );
 };
 
 const StepEmp1 = ({data,set,onNext}) => {
+  const {lang} = useLang();
   const [foto,setFoto] = useState(data.foto||"");
   const [emp,setEmp] = useState(data.empresa||"");
   const [con,setCon] = useState(data.contacto||"");
@@ -2200,22 +2263,23 @@ const StepEmp1 = ({data,set,onNext}) => {
   const next = () => { set({...data,foto,empresa:emp,contacto:con,email:em,tel,rubro:rub,...geo}); onNext(); };
   return (
     <div style={{padding:"24px 20px 32px"}}>
-      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Datos de tu empresa</div>
-      <div style={{color:"#888",fontSize:13,marginBottom:20}}>Los profesionales verán este perfil</div>
+      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>{lang==="en"?"Your company info":"Datos de tu empresa"}</div>
+      <div style={{color:"#888",fontSize:13,marginBottom:20}}>{lang==="en"?"Professionals will see this profile":"Los profesionales verán este perfil"}</div>
       <FotoPicker foto={foto} onFoto={setFoto} color="#1a1a2e" init={init} size={80}/>
-      <Inp label="Empresa *" placeholder="Ej: Constructora Omega S.A." value={emp} onChange={setEmp}/>
-      <Inp label="Contacto *" placeholder="Tu nombre y apellido" value={con} onChange={setCon}/>
-      <Inp label="Email" optional type="email" placeholder="rrhh@empresa.com" value={em} onChange={setEm}/>
-      <Inp label="Teléfono" optional placeholder="+54 11..." value={tel} onChange={setTel}/>
-      <Sel label="Rubro" optional value={rub} onChange={setRub}
-        options={[{v:"",l:"Seleccioná el rubro..."},...SECTORES.map(s=>({v:s,l:s}))]}/>
+      <Inp label={lang==="en"?"Company *":"Empresa *"} placeholder={lang==="en"?"E.g: Omega Construction Inc.":"Ej: Constructora Omega S.A."} value={emp} onChange={setEmp}/>
+      <Inp label={lang==="en"?"Contact *":"Contacto *"} placeholder={lang==="en"?"Your first and last name":"Tu nombre y apellido"} value={con} onChange={setCon}/>
+      <Inp label="Email" optional type="email" placeholder="hr@company.com" value={em} onChange={setEm}/>
+      <Inp label={lang==="en"?"Phone":"Teléfono"} optional placeholder="+54 11..." value={tel} onChange={setTel}/>
+      <Sel label={lang==="en"?"Industry":"Rubro"} optional value={rub} onChange={setRub}
+        options={[{v:"",l:lang==="en"?"Select industry...":"Seleccioná el rubro..."},...SECTORES.map(s=>({v:s,l:s}))]}/>
       <GeoSel pais={geo.pais} provincia={geo.provincia} ciudad={geo.ciudad} onChange={setGeo}/>
-      <Btn onClick={next} disabled={!ok}>Continuar</Btn>
+      <Btn onClick={next} disabled={!ok}>{lang==="en"?"Continue":"Continuar"}</Btn>
     </div>
   );
 };
 
 const StepEmp2 = ({data,set,onNext}) => {
+  const {lang} = useLang();
   const [tipo,setTipo] = useState(data.tipoBusqueda||"");
   const [mod,setMod] = useState(data.modalidad||"");
   const [sec,setSec] = useState(data.sectorObra||"");
@@ -2229,28 +2293,28 @@ const StepEmp2 = ({data,set,onNext}) => {
   const next = () => { set({...data,tipoBusqueda:tipo,modalidad:mod,sectorObra:sec,zonaObra:zona,radio:rad,dias,presupuesto:pres,moneda:mon,seguro}); onNext(); };
   return (
     <div style={{padding:"24px 20px 32px"}}>
-      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Qué profesional buscás</div>
-      <div style={{color:"#888",fontSize:13,marginBottom:20}}>Filtramos los candidatos más relevantes</div>
+      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>{lang==="en"?"Who are you looking for":"Qué profesional buscás"}</div>
+      <div style={{color:"#888",fontSize:13,marginBottom:20}}>{lang==="en"?"We'll filter the most relevant candidates":"Filtramos los candidatos más relevantes"}</div>
       <div style={{marginBottom:18}}>
-        <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>Título requerido *</label>
+        <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>{lang==="en"?"Required degree *":"Título requerido *"}</label>
         <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
-          {[{v:"est",l:"Estudiante"},{v:"tec",l:"Técnico"},{v:"lic",l:"Licenciado"},
-            {v:"ing",l:"Ingeniero"},{v:"cualquiera",l:"Cualquiera"}].map(({v,l})=>(
+          {[{v:"est",l:lang==="en"?"Student":"Estudiante"},{v:"tec",l:lang==="en"?"Technician":"Técnico"},{v:"lic",l:lang==="en"?"Graduate":"Licenciado"},
+            {v:"ing",l:lang==="en"?"Engineer":"Ingeniero"},{v:"cualquiera",l:lang==="en"?"Any":"Cualquiera"}].map(({v,l})=>(
             <Chip key={v} selected={tipo===v} onClick={()=>setTipo(v)}>{l}</Chip>
           ))}
         </div>
       </div>
-      <Sel label="Modalidad *" value={mod} onChange={setMod}
-        options={[{v:"",l:"Seleccioná..."},{v:"puntual",l:"Obra / trabajo puntual"},
-          {v:"part",l:"Part-time"},{v:"full",l:"Full-time / dependencia"},
-          {v:"dias",l:"Por días sueltos"},{v:"cualquiera",l:"Cualquier modalidad"}]}/>
-      <Sel label="Sector" optional value={sec} onChange={setSec}
-        options={[{v:"",l:"Seleccioná..."},...SECTORES.map(s=>({v:s,l:s}))]}/>
-      <Inp label="Zona de trabajo" optional placeholder="Ej: Palermo, CABA" value={zona} onChange={setZona}/>
+      <Sel label={lang==="en"?"Work mode *":"Modalidad *"} value={mod} onChange={setMod}
+        options={[{v:"",l:lang==="en"?"Select...":"Seleccioná..."},{v:"puntual",l:lang==="en"?"One-off project":"Obra / trabajo puntual"},
+          {v:"part",l:"Part-time"},{v:"full",l:lang==="en"?"Full-time / employed":"Full-time / dependencia"},
+          {v:"dias",l:lang==="en"?"Occasional days":"Por días sueltos"},{v:"cualquiera",l:lang==="en"?"Any work mode":"Cualquier modalidad"}]}/>
+      <Sel label={lang==="en"?"Sector":"Sector"} optional value={sec} onChange={setSec}
+        options={[{v:"",l:lang==="en"?"Select...":"Seleccioná..."},...SECTORES.map(s=>({v:s,l:s}))]}/>
+      <Inp label={lang==="en"?"Work area":"Zona de trabajo"} optional placeholder={lang==="en"?"E.g: Downtown Miami":"Ej: Palermo, CABA"} value={zona} onChange={setZona}/>
       <div style={{marginBottom:18}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>
-            Radio de búsqueda <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+            {lang==="en"?"Search radius":"Radio de búsqueda"} <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>{lang==="en"?"Optional":"Opcional"}</span>
           </label>
           <span style={{fontSize:14,fontWeight:800,color:"#1a1a2e",background:"#f0f0f8",
             padding:"3px 10px",borderRadius:99}}>{rad} km</span>
@@ -2266,45 +2330,49 @@ const StepEmp2 = ({data,set,onNext}) => {
       </div>
       <div style={{marginBottom:18}}>
         <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
-          Días <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+          {lang==="en"?"Days":"Días"} <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>{lang==="en"?"Optional":"Opcional"}</span>
         </label>
         <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
           {DIAS.map(d=>(
             <Chip key={d} selected={dias.includes(d)}
               onClick={()=>setDias(c=>c.includes(d)?c.filter(x=>x!==d):[...c,d])}>
-              {d}
+              {lang==="en"?DIAS_LABEL_EN[d]:d}
             </Chip>
           ))}
         </div>
       </div>
       <Honorarios value={pres} moneda={mon} onValue={setPres} onMoneda={setMon}/>
       <ToggleSeguro pais={data.pais} value={seguro} onChange={setSeguro} esOferta={true}/>
-      <Btn onClick={next} disabled={!ok}>Continuar</Btn>
+      <Btn onClick={next} disabled={!ok}>{lang==="en"?"Continue":"Continuar"}</Btn>
     </div>
   );
 };
 
 const StepEmp3 = ({data,set,onNext}) => {
+  const {lang} = useLang();
   const [desc,setDesc] = useState(data.descripcionObra||"");
   const [sreq,setSreq] = useState(data.skillsReq||[]);
   const [urg,setUrg] = useState(data.urgencia||"");
   const next = () => { set({...data,descripcionObra:desc,skillsReq:sreq,urgencia:urg}); onNext(); };
   return (
     <div style={{padding:"24px 20px 32px"}}>
-      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Describí la búsqueda</div>
-      <div style={{color:"#888",fontSize:13,marginBottom:20}}>Cuanto más detalle, mejores candidatos</div>
-      <Txt label="Descripción" optional value={desc} onChange={setDesc}
-        example="Obra de construcción de torre en Caballito. Buscamos Técnico para elaboración de Programa de Seguridad y recorridas diarias. Duración: 4 meses."/>
-      <SkillSelector label="Skills requeridos" selected={sreq} onChange={setSreq}/>
-      <Sel label="Urgencia" optional value={urg} onChange={setUrg}
-        options={[{v:"",l:"Seleccioná..."},{v:"ya",l:"Urgente — necesito alguien ya"},
-          {v:"semana",l:"Esta semana"},{v:"mes",l:"En el próximo mes"}]}/>
-      <Btn onClick={next}>Ver resumen</Btn>
+      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>{lang==="en"?"Describe the listing":"Describí la búsqueda"}</div>
+      <div style={{color:"#888",fontSize:13,marginBottom:20}}>{lang==="en"?"More detail means better candidates":"Cuanto más detalle, mejores candidatos"}</div>
+      <Txt label={lang==="en"?"Description":"Descripción"} optional value={desc} onChange={setDesc}
+        example={lang==="en"
+          ?"Tower construction site in Miami. Looking for a Technician to draft the Safety Program and do daily walkthroughs. Duration: 4 months."
+          :"Obra de construcción de torre en Caballito. Buscamos Técnico para elaboración de Programa de Seguridad y recorridas diarias. Duración: 4 meses."}/>
+      <SkillSelector label={lang==="en"?"Required skills":"Skills requeridos"} selected={sreq} onChange={setSreq}/>
+      <Sel label={lang==="en"?"Urgency":"Urgencia"} optional value={urg} onChange={setUrg}
+        options={[{v:"",l:lang==="en"?"Select...":"Seleccioná..."},{v:"ya",l:lang==="en"?"Urgent — need someone now":"Urgente — necesito alguien ya"},
+          {v:"semana",l:lang==="en"?"This week":"Esta semana"},{v:"mes",l:lang==="en"?"Next month":"En el próximo mes"}]}/>
+      <Btn onClick={next}>{lang==="en"?"See summary":"Ver resumen"}</Btn>
     </div>
   );
 };
 
 const Resumen = ({rol,data,onConfirm}) => {
+  const {lang} = useLang();
   const esPro = rol==="profesional";
   const init = esPro
     ? ((data.nombre||"?")[0]+(data.apellido||"?")[0]).toUpperCase()
@@ -2314,8 +2382,8 @@ const Resumen = ({rol,data,onConfirm}) => {
   const tit = TITULOS[data.titulo]||"";
   return (
     <div style={{padding:"24px 20px 32px"}}>
-      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>Perfil listo!</div>
-      <div style={{color:"#888",fontSize:13,marginBottom:20}}>Revisá todo antes de entrar a Safy</div>
+      <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>{lang==="en"?"Profile ready!":"Perfil listo!"}</div>
+      <div style={{color:"#888",fontSize:13,marginBottom:20}}>{lang==="en"?"Review everything before entering Safy":"Revisá todo antes de entrar a Safy"}</div>
       <div style={{background:"#fff",borderRadius:16,padding:18,boxShadow:"0 2px 12px rgba(0,0,0,0.08)",marginBottom:14}}>
         <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:14}}>
           <Av init={init} color="#1a1a2e" size={60} foto={data.foto||""}/>
@@ -2323,9 +2391,9 @@ const Resumen = ({rol,data,onConfirm}) => {
             <div style={{fontWeight:800,fontSize:17,color:"#1a1a2e"}}>
               {esPro?(data.nombre+" "+(data.apellido||"")).trim():data.empresa}
             </div>
-            <div style={{color:"#666",fontSize:13}}>{esPro?tit:data.rubro||"Empresa"}</div>
+            <div style={{color:"#666",fontSize:13}}>{esPro?tit:data.rubro||(lang==="en"?"Company":"Empresa")}</div>
             <div style={{fontSize:12,color:"#888",marginTop:2}}>
-              {[data.ciudad,data.provincia].filter(Boolean).join(", ")||"Sin ubicación"}
+              {[data.ciudad,data.provincia].filter(Boolean).join(", ")||(lang==="en"?"No location":"Sin ubicación")}
             </div>
           </div>
         </div>
@@ -2344,17 +2412,17 @@ const Resumen = ({rol,data,onConfirm}) => {
         )}
         <div style={{borderTop:"1px solid #f0f0f0",paddingTop:12}}>
           <div style={{fontSize:11,color:"#999",fontWeight:600}}>
-            {esPro?"TARIFA / HORA":"PRESUPUESTO MÁX / HORA"}
+            {esPro?(lang==="en"?"RATE / HOUR":"TARIFA / HORA"):(lang==="en"?"MAX BUDGET / HOUR":"PRESUPUESTO MÁX / HORA")}
           </div>
           <div style={{fontSize:20,fontWeight:800,color:"#1a1a2e"}}>
-            {val?(sym+Number(val).toLocaleString()+"/h"):"No indicado"}
+            {val?(sym+Number(val).toLocaleString()+"/h"):(lang==="en"?"Not specified":"No indicado")}
           </div>
         </div>
       </div>
       <div style={{background:"#fffbf3",borderRadius:12,padding:"12px 14px",marginBottom:20,
         border:"1.5px solid #F4A261"}}>
         <div style={{fontSize:12,color:"#b45309"}}>
-          Podés editar tu perfil en cualquier momento desde Mi Perfil
+          {lang==="en"?"You can edit your profile anytime from My Profile":"Podés editar tu perfil en cualquier momento desde Mi Perfil"}
         </div>
       </div>
       <AceptacionLegal onConfirm={onConfirm}/>
@@ -2363,6 +2431,7 @@ const Resumen = ({rol,data,onConfirm}) => {
 };
 
 const Onboarding = ({onComplete, googleData}) => {
+  const {lang} = useLang();
   const [step,setStep] = useState(0);
   const [rol,setRol] = useState(null);
   const [modo,setModo] = useState(null);
@@ -2415,13 +2484,13 @@ const Onboarding = ({onComplete, googleData}) => {
         {step===0&&(
           <div style={{display:"flex",flexDirection:"column",gap:14,padding:"32px 20px"}}>
             <div style={{textAlign:"center",marginBottom:8}}>
-              <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:6}}>Quién sos?</div>
-              <div style={{color:"#666",fontSize:14,lineHeight:1.5}}>Elegí tu rol para personalizar Safy</div>
+              <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:6}}>{lang==="en"?"Who are you?":"Quién sos?"}</div>
+              <div style={{color:"#666",fontSize:14,lineHeight:1.5}}>{lang==="en"?"Choose your role to personalize Safy":"Elegí tu rol para personalizar Safy"}</div>
             </div>
-            {[{r:"profesional",e:"Soy profesional de SyH / MA",
-               d:"Técnico, Licenciado, Ingeniero o Estudiante buscando oportunidades"},
-              {r:"empresa",e:"Soy empresa / contratista",
-               d:"Empresa o constructora que busca profesionales para obras o proyectos"}].map(({r,e,d})=>(
+            {[{r:"profesional",e:lang==="en"?"I'm an HSE professional":"Soy profesional de SyH / MA",
+               d:lang==="en"?"Technician, Graduate, Engineer or Student looking for opportunities":"Técnico, Licenciado, Ingeniero o Estudiante buscando oportunidades"},
+              {r:"empresa",e:lang==="en"?"I'm a company / contractor":"Soy empresa / contratista",
+               d:lang==="en"?"Company or contractor looking for professionals for projects":"Empresa o constructora que busca profesionales para obras o proyectos"}].map(({r,e,d})=>(
               <button key={r} onClick={()=>elegirRol(r)}
                 style={{background:"#fff",border:"2px solid #e0e0ef",borderRadius:16,
                   padding:20,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}
@@ -2436,11 +2505,11 @@ const Onboarding = ({onComplete, googleData}) => {
         {step===0.5&&(
           <div style={{display:"flex",flexDirection:"column",gap:14,padding:"32px 20px"}}>
             <div style={{textAlign:"center",marginBottom:8}}>
-              <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:6}}>Qué querés hacer?</div>
+              <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:6}}>{lang==="en"?"What do you want to do?":"Qué querés hacer?"}</div>
             </div>
-            {[{m:"candidato",e:"Crear mi perfil como candidato",d:"Para que las empresas te encuentren"},
-              {m:"busqueda",e:"Publicar una búsqueda",d:"Buscás un profesional para una obra puntual"},
-              {m:"ambos",e:"Las dos cosas",d:"Perfil de candidato y publicar búsqueda"}].map(({m,e,d})=>(
+            {[{m:"candidato",e:lang==="en"?"Create my candidate profile":"Crear mi perfil como candidato",d:lang==="en"?"So companies can find you":"Para que las empresas te encuentren"},
+              {m:"busqueda",e:lang==="en"?"Post a job listing":"Publicar una búsqueda",d:lang==="en"?"You're looking for a professional for a project":"Buscás un profesional para una obra puntual"},
+              {m:"ambos",e:lang==="en"?"Both":"Las dos cosas",d:lang==="en"?"Candidate profile and job listing":"Perfil de candidato y publicar búsqueda"}].map(({m,e,d})=>(
               <button key={m} onClick={()=>elegirModo(m)}
                 style={{background:"#fff",border:"2px solid #e0e0ef",borderRadius:16,
                   padding:20,textAlign:"left",cursor:"pointer",fontFamily:"inherit"}}
@@ -2477,8 +2546,9 @@ const Onboarding = ({onComplete, googleData}) => {
 // ─── CHAT ─────────────────────────────────────────────────────────────────────
 
 const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
+  const {lang} = useLang();
   const chatId = [userData?.id||"me", String(match?.id||"them")].sort().join("_");
-  const initMsg = [{from:"them",text:"Hola, vi tu perfil en Safy. Me interesa tu experiencia. ¿Podemos coordinar?",time:"10:32"}];
+  const initMsg = [{from:"them",text:lang==="en"?"Hi, I saw your profile on Safy. I'm interested in your experience. Can we coordinate?":"Hola, vi tu perfil en Safy. Me interesa tu experiencia. ¿Podemos coordinar?",time:"10:32"}];
 
   // Cargar historial desde localStorage primero, luego Supabase
   const [msgs, setMsgsState] = useState(()=>{
@@ -2498,7 +2568,7 @@ const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
         const mapped = rows.map(r=>({
           from: r.from_role || "me",
           text: r.texto,
-          time: new Date(r.created_at).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})
+          time: new Date(r.created_at).toLocaleTimeString(lang==="en"?"en-US":"es-AR",{hour:"2-digit",minute:"2-digit"})
         }));
         const combined = [...initMsg, ...mapped];
         setMsgsState(combined);
@@ -2539,7 +2609,9 @@ const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
     // Solo responder automáticamente si NO es un perfil seed
     const esSeed = match?.id && String(match.id).startsWith("00000000-");
     if(!esSeed) {
-      const rs=["¿Qué días tenés disponibles?","¿Podés enviarme tu CV?","¿Cuál es tu tarifa?","Te mando más detalles.","¿Tenés experiencia en el sector?"];
+      const rs = lang==="en"
+        ? ["What days are you available?","Can you send me your resume?","What's your rate?","I'll send more details.","Do you have experience in the sector?"]
+        : ["¿Qué días tenés disponibles?","¿Podés enviarme tu CV?","¿Cuál es tu tarifa?","Te mando más detalles.","¿Tenés experiencia en el sector?"];
       setTimeout(()=>{
         const now2=new Date();
         const t2=now2.getHours()+":"+String(now2.getMinutes()).padStart(2,"0");
@@ -2561,11 +2633,11 @@ const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
           <div style={{fontSize:11,color:"#aaa"}}>{TITULOS[match.titulo]||match.tipo||""} · {match.ciudad}</div>
         </div>
         <div style={{background:"rgba(42,157,143,0.2)",borderRadius:99,padding:"4px 10px",fontSize:11,color:"#2A9D8F",fontWeight:700}}>
-          Conectados
+          {lang==="en"?"Connected":"Conectados"}
         </div>
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"16px 14px",display:"flex",flexDirection:"column",gap:10}}>
-        <div style={{textAlign:"center",fontSize:11,color:"#aaa",marginBottom:4}}>Conexión en Safy</div>
+        <div style={{textAlign:"center",fontSize:11,color:"#aaa",marginBottom:4}}>{lang==="en"?"Connection on Safy":"Conexión en Safy"}</div>
         {msgs.map((m,i)=>{
           const isMe = m.from==="me";
           return (
@@ -2589,7 +2661,7 @@ const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
         display:"flex",gap:10,alignItems:"center",flexShrink:0,position:"relative"}}>
         <input value={input} onChange={e=>setInput(e.target.value)}
           onKeyDown={e=>e.key==="Enter"&&send()}
-          placeholder="Escribí un mensaje..."
+          placeholder={lang==="en"?"Write a message...":"Escribí un mensaje..."}
           style={{flex:1,padding:"11px 14px",borderRadius:99,border:"1.5px solid #e0e0ef",
             fontSize:14,outline:"none",background:"#f8f8fc"}}/>
         <button onClick={send}
@@ -2605,6 +2677,7 @@ const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
 
 // ─── RATING STARS ────────────────────────────────────────────────────────────
 const RatingStars = ({rating, trabajos, canRate, onRate}) => {
+  const {lang} = useLang();
   const [hover,       setHover]       = useState(0);
   const [selected,    setSelected]    = useState(0);
   const [showPanel,   setShowPanel]   = useState(false);
@@ -2613,7 +2686,9 @@ const RatingStars = ({rating, trabajos, canRate, onRate}) => {
 
   const existing = rating ? Math.round(rating) : 0;
   const active   = hover || selected || existing;
-  const labels   = ["","Muy mala","Mala","Regular","Buena","Excelente"];
+  const labels   = lang==="en"
+    ? ["","Very poor","Poor","Fair","Good","Excellent"]
+    : ["","Muy mala","Mala","Regular","Buena","Excelente"];
 
   const handlePick = (n) => {
     if(!canRate) return;
@@ -2658,7 +2733,7 @@ const RatingStars = ({rating, trabajos, canRate, onRate}) => {
         {rating&&!done&&(
           <div style={{display:"flex",alignItems:"center",gap:4}}>
             <span style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>{rating}</span>
-            {trabajos&&<span style={{fontSize:12,color:"#aaa"}}>({trabajos} trabajos)</span>}
+            {trabajos&&<span style={{fontSize:12,color:"#aaa"}}>({trabajos} {lang==="en"?"jobs":"trabajos"})</span>}
           </div>
         )}
         {/* Label hover */}
@@ -2667,12 +2742,12 @@ const RatingStars = ({rating, trabajos, canRate, onRate}) => {
         )}
         {/* Confirmación */}
         {done&&(
-          <span style={{fontSize:12,color:"#2A9D8F",fontWeight:600}}>Valoración enviada ✓</span>
+          <span style={{fontSize:12,color:"#2A9D8F",fontWeight:600}}>{lang==="en"?"Rating submitted ✓":"Valoración enviada ✓"}</span>
         )}
       </div>
       {canRate&&!done&&hover===0&&selected===0&&(
         <div style={{fontSize:11,color:"#aaa",marginTop:4}}>
-          Tocá las estrellas para valorar
+          {lang==="en"?"Tap the stars to rate":"Tocá las estrellas para valorar"}
         </div>
       )}
     </div>
@@ -2683,6 +2758,7 @@ const RatingStars = ({rating, trabajos, canRate, onRate}) => {
 // ─── PERFIL COMPLETO ──────────────────────────────────────────────────────────
 
 const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
+  const {lang} = useLang();
   const esPro = !!persona.nombre;
   const init = esPro
     ? (persona.nombre[0]+((persona.apellido||" ")[0])).toUpperCase()
@@ -2703,12 +2779,12 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
           style={{background:"none",border:"none",color:"#aaa",fontSize:24,cursor:"pointer",padding:0,fontFamily:"inherit"}}>
           ‹
         </button>
-        <div style={{flex:1,fontWeight:800,fontSize:16,color:"#fff"}}>Perfil completo</div>
+        <div style={{flex:1,fontWeight:800,fontSize:16,color:"#fff"}}>{lang==="en"?"Full profile":"Perfil completo"}</div>
         {onChat&&(
           <button onClick={onChat}
             style={{background:"#F4A261",border:"none",borderRadius:99,padding:"7px 14px",
               fontWeight:700,fontSize:12,color:"#1a1a2e",cursor:"pointer",fontFamily:"inherit"}}>
-            Chatear
+            {lang==="en"?"Chat":"Chatear"}
           </button>
         )}
       </div>
@@ -2724,7 +2800,7 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
                 </div>
                 {onReportar&&(
                   <button onClick={onReportar}
-                    title="Reportar o bloquear"
+                    title={lang==="en"?"Report or block":"Reportar o bloquear"}
                     style={{background:"none",border:"none",fontSize:18,cursor:"pointer",
                       padding:"2px 4px",lineHeight:1,flexShrink:0,opacity:0.6}}>
                     🚩
@@ -2752,13 +2828,13 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
           {persona.disponibilidad&&(
             <div style={{marginBottom:14}}>
               {persona.disponibilidad==="disponible"&&(
-                <span style={{background:"#e8f7f5",color:"#2A9D8F",padding:"4px 12px",borderRadius:99,fontSize:12,fontWeight:700}}>Disponible ahora</span>
+                <span style={{background:"#e8f7f5",color:"#2A9D8F",padding:"4px 12px",borderRadius:99,fontSize:12,fontWeight:700}}>{lang==="en"?"Available now":"Disponible ahora"}</span>
               )}
               {persona.disponibilidad==="parcial"&&(
-                <span style={{background:"#fff3e0",color:"#F4A261",padding:"4px 12px",borderRadius:99,fontSize:12,fontWeight:700}}>Disponibilidad parcial</span>
+                <span style={{background:"#fff3e0",color:"#F4A261",padding:"4px 12px",borderRadius:99,fontSize:12,fontWeight:700}}>{lang==="en"?"Partially available":"Disponibilidad parcial"}</span>
               )}
               {persona.disponibilidad==="no"&&(
-                <span style={{background:"#fdecea",color:"#E63946",padding:"4px 12px",borderRadius:99,fontSize:12,fontWeight:700}}>No disponible</span>
+                <span style={{background:"#fdecea",color:"#E63946",padding:"4px 12px",borderRadius:99,fontSize:12,fontWeight:700}}>{lang==="en"?"Not available":"No disponible"}</span>
               )}
             </div>
           )}
@@ -2773,7 +2849,7 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
               paddingTop:14,borderTop:"1px solid #f0f0f0"}}>
               <div>
-                <div style={{fontSize:11,color:"#aaa",fontWeight:600,marginBottom:2}}>TARIFA / HORA</div>
+                <div style={{fontSize:11,color:"#aaa",fontWeight:600,marginBottom:2}}>{lang==="en"?"RATE / HOUR":"TARIFA / HORA"}</div>
                 <div style={{fontSize:24,fontWeight:800,color:"#1a1a2e"}}>
                   {persona.moneda==="USD"?"U$D":"$"}{Number(persona.tarifa||persona.presupuesto).toLocaleString()}
                   <span style={{fontSize:13,color:"#888",fontWeight:400}}>/h</span>
@@ -2781,7 +2857,7 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
               </div>
               {persona.distancia!=null&&(
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:11,color:"#aaa",fontWeight:600,marginBottom:2}}>DISTANCIA</div>
+                  <div style={{fontSize:11,color:"#aaa",fontWeight:600,marginBottom:2}}>{lang==="en"?"DISTANCE":"DISTANCIA"}</div>
                   <div style={{fontSize:20,fontWeight:800,color:"#1a1a2e"}}>{persona.distancia} km</div>
                 </div>
               )}
@@ -2798,7 +2874,7 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
         )}
         {(persona.obras||[]).length>0&&(
           <div style={{background:"#fff",borderRadius:16,padding:18,boxShadow:"0 2px 10px rgba(0,0,0,0.07)",marginBottom:14}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:12}}>Obras y proyectos</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:12}}>{lang==="en"?"Projects":"Obras y proyectos"}</div>
             {persona.obras.map((o,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:10,
                 padding:"9px 0",borderBottom:i<persona.obras.length-1?"1px solid #f5f5f5":"none"}}>
@@ -2809,7 +2885,7 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
         )}
         {(persona.email||persona.tel)&&(
           <div style={{background:"#fff",borderRadius:16,padding:18,boxShadow:"0 2px 10px rgba(0,0,0,0.07)",marginBottom:14}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:10}}>Contacto</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:10}}>{lang==="en"?"Contact":"Contacto"}</div>
             {persona.email&&<div style={{fontSize:13,color:"#1a73e8",fontWeight:600,marginBottom:6}}>{persona.email}</div>}
             {persona.tel&&<div style={{fontSize:13,color:"#1a1a2e",fontWeight:600}}>{persona.tel}</div>}
           </div>
@@ -2818,7 +2894,7 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
           <button onClick={onChat}
             style={{width:"100%",padding:15,borderRadius:14,border:"none",background:"#1a1a2e",
               color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"inherit"}}>
-            Iniciar conversación
+            {lang==="en"?"Start conversation":"Iniciar conversación"}
           </button>
         )}
       </div>
@@ -2829,6 +2905,7 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
 // ─── ELIMINAR CUENTA ─────────────────────────────────────────────────────────
 
 const EliminarCuentaSection = ({onConfirm}) => {
+  const {lang} = useLang();
   const [paso,setPaso] = useState(0);
 
   useEffect(()=>{
@@ -2841,27 +2918,27 @@ const EliminarCuentaSection = ({onConfirm}) => {
   if(paso===2) return (
     <div style={{textAlign:"center",padding:"24px 0 8px"}}>
       <div style={{fontSize:32,marginBottom:8}}>👋</div>
-      <div style={{fontSize:14,fontWeight:700,color:"#1a1a2e",marginBottom:4}}>Cuenta eliminada</div>
-      <div style={{fontSize:12,color:"#aaa",marginTop:4}}>Redirigiendo...</div>
+      <div style={{fontSize:14,fontWeight:700,color:"#1a1a2e",marginBottom:4}}>{lang==="en"?"Account deleted":"Cuenta eliminada"}</div>
+      <div style={{fontSize:12,color:"#aaa",marginTop:4}}>{lang==="en"?"Redirecting...":"Redirigiendo..."}</div>
     </div>
   );
 
   if(paso===1) return (
     <div style={{borderTop:"1px solid #f0f0f0",paddingTop:20,marginTop:8}}>
-      <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:6}}>Estás seguro?</div>
+      <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:6}}>{lang==="en"?"Are you sure?":"Estás seguro?"}</div>
       <div style={{fontSize:12,color:"#888",lineHeight:1.5,marginBottom:16}}>
-        Esta acción elimina tu perfil, conexiones y toda tu información. No se puede deshacer.
+        {lang==="en"?"This deletes your profile, connections and all your information. It can't be undone.":"Esta acción elimina tu perfil, conexiones y toda tu información. No se puede deshacer."}
       </div>
       <div style={{display:"flex",gap:10}}>
         <button onClick={()=>setPaso(0)}
           style={{flex:1,padding:"11px 0",borderRadius:12,border:"1.5px solid #e0e0ef",
             background:"#fff",color:"#555",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-          Cancelar
+          {lang==="en"?"Cancel":"Cancelar"}
         </button>
         <button onClick={()=>setPaso(2)}
           style={{flex:1,padding:"11px 0",borderRadius:12,border:"none",background:"#E63946",
             color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-          Sí, eliminar
+          {lang==="en"?"Yes, delete":"Sí, eliminar"}
         </button>
       </div>
     </div>
@@ -2872,7 +2949,7 @@ const EliminarCuentaSection = ({onConfirm}) => {
       <button onClick={()=>setPaso(1)}
         style={{background:"none",border:"none",color:"#bbb",fontSize:12,cursor:"pointer",
           fontFamily:"inherit",textDecoration:"underline"}}>
-        Eliminar mi cuenta
+        {lang==="en"?"Delete my account":"Eliminar mi cuenta"}
       </button>
     </div>
   );
@@ -2880,6 +2957,7 @@ const EliminarCuentaSection = ({onConfirm}) => {
 // ─── EDITAR CUENTA ────────────────────────────────────────────────────────────
 
 const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onDescubrirPro}) => {
+  const {lang} = useLang();
   const [d,setD] = useState({...userData});
   const esPro = userRol==="profesional";
   const upd = (k,v) => setD(p=>({...p,[k]:v}));
@@ -2893,21 +2971,21 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onDes
           style={{background:"none",border:"none",color:"#aaa",fontSize:24,cursor:"pointer",padding:0,fontFamily:"inherit"}}>
           ‹
         </button>
-        <div style={{flex:1,fontWeight:800,fontSize:17,color:"#fff"}}>Configurar cuenta</div>
+        <div style={{flex:1,fontWeight:800,fontSize:17,color:"#fff"}}>{lang==="en"?"Account settings":"Configurar cuenta"}</div>
         <button onClick={()=>onSave(d)}
           style={{background:"#F4A261",border:"none",borderRadius:99,padding:"7px 16px",
             fontWeight:800,fontSize:13,color:"#1a1a2e",cursor:"pointer",fontFamily:"inherit"}}>
-          Guardar
+          {lang==="en"?"Save":"Guardar"}
         </button>
       </div>
       <div style={{padding:"20px 20px 40px"}}>
         {esPro&&(
           <div style={{background:"#fff",borderRadius:16,padding:18,marginBottom:16,boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
-            <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:12}}>Estado de disponibilidad</div>
-            {[{v:"disponible",t:"Disponible ahora",desc:"Aparecés primero"},
-              {v:"obra",t:"En obra actualmente",desc:"Disponibilidad limitada"},
-              {v:"parcial",t:"Disponibilidad parcial",desc:"Acepto proyectos puntuales"},
-              {v:"no",t:"No disponible",desc:"No acepto nuevas propuestas"}].map(({v,t,desc})=>(
+            <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:12}}>{lang==="en"?"Availability status":"Estado de disponibilidad"}</div>
+            {[{v:"disponible",t:lang==="en"?"Available now":"Disponible ahora",desc:lang==="en"?"You show up first":"Aparecés primero"},
+              {v:"obra",t:lang==="en"?"Currently on a project":"En obra actualmente",desc:lang==="en"?"Limited availability":"Disponibilidad limitada"},
+              {v:"parcial",t:lang==="en"?"Partially available":"Disponibilidad parcial",desc:lang==="en"?"I take one-off projects":"Acepto proyectos puntuales"},
+              {v:"no",t:lang==="en"?"Not available":"No disponible",desc:lang==="en"?"Not taking new offers":"No acepto nuevas propuestas"}].map(({v,t,desc})=>(
               <button key={v} onClick={()=>upd("disponibilidad",v)}
                 style={{width:"100%",marginBottom:8,
                   background:d.disponibilidad===v?"#f0f0f8":"#fff",
@@ -2924,7 +3002,7 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onDes
           </div>
         )}
         <div style={{background:"#fff",borderRadius:16,padding:18,marginBottom:16,boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
-          <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>Foto de perfil</div>
+          <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>{lang==="en"?"Profile photo":"Foto de perfil"}</div>
           <FotoPicker foto={d.foto||""} onFoto={v=>upd("foto",v)} color="#1a1a2e"
             init={esPro
               ? ((d.nombre||"?")[0]+(d.apellido||"?")[0]).toUpperCase()
@@ -2932,17 +3010,17 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onDes
             size={80}/>
         </div>
         <div style={{background:"#fff",borderRadius:16,padding:18,marginBottom:16,boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
-          <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>Datos personales</div>
+          <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>{lang==="en"?"Personal info":"Datos personales"}</div>
           {esPro?(
             <>
-              <Inp label="Nombre" value={d.nombre||""} onChange={v=>upd("nombre",v)} placeholder="Tu nombre"/>
-              <Inp label="Apellido" value={d.apellido||""} onChange={v=>upd("apellido",v)} placeholder="Tu apellido"/>
-              <Inp label="Email" type="email" value={d.email||""} onChange={v=>upd("email",v)} placeholder="tu@email.com"/>
-              <Inp label="Teléfono" optional value={d.tel||""} onChange={v=>upd("tel",v)} placeholder="+54 9 11..."/>
+              <Inp label={lang==="en"?"First name":"Nombre"} value={d.nombre||""} onChange={v=>upd("nombre",v)} placeholder={lang==="en"?"Your first name":"Tu nombre"}/>
+              <Inp label={lang==="en"?"Last name":"Apellido"} value={d.apellido||""} onChange={v=>upd("apellido",v)} placeholder={lang==="en"?"Your last name":"Tu apellido"}/>
+              <Inp label="Email" type="email" value={d.email||""} onChange={v=>upd("email",v)} placeholder="you@email.com"/>
+              <Inp label={lang==="en"?"Phone":"Teléfono"} optional value={d.tel||""} onChange={v=>upd("tel",v)} placeholder="+54 9 11..."/>
               {/* Radio con slider */}
               <div style={{marginBottom:18}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                  <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>Radio de trabajo</label>
+                  <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>{lang==="en"?"Work radius":"Radio de trabajo"}</label>
                   <span style={{fontSize:14,fontWeight:800,color:"#1a1a2e",background:"#f0f0f8",
                     padding:"3px 10px",borderRadius:99}}>{d.radio||30} km</span>
                 </div>
@@ -2956,10 +3034,10 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onDes
             </>
           ):(
             <>
-              <Inp label="Empresa" value={d.empresa||""} onChange={v=>upd("empresa",v)} placeholder="Nombre de la empresa"/>
-              <Inp label="Contacto" value={d.contacto||""} onChange={v=>upd("contacto",v)} placeholder="Nombre y apellido"/>
-              <Inp label="Email" type="email" value={d.email||""} onChange={v=>upd("email",v)} placeholder="tu@empresa.com"/>
-              <Inp label="Teléfono" optional value={d.tel||""} onChange={v=>upd("tel",v)} placeholder="+54 11..."/>
+              <Inp label={lang==="en"?"Company":"Empresa"} value={d.empresa||""} onChange={v=>upd("empresa",v)} placeholder={lang==="en"?"Company name":"Nombre de la empresa"}/>
+              <Inp label={lang==="en"?"Contact":"Contacto"} value={d.contacto||""} onChange={v=>upd("contacto",v)} placeholder={lang==="en"?"First and last name":"Nombre y apellido"}/>
+              <Inp label="Email" type="email" value={d.email||""} onChange={v=>upd("email",v)} placeholder="you@company.com"/>
+              <Inp label={lang==="en"?"Phone":"Teléfono"} optional value={d.tel||""} onChange={v=>upd("tel",v)} placeholder="+54 11..."/>
             </>
           )}
           <GeoSel
@@ -2968,55 +3046,55 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onDes
         </div>
         {esPro&&(
           <div style={{background:"#fff",borderRadius:16,padding:18,marginBottom:16,boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
-            <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>Perfil profesional</div>
-            <Sel label="Título en SyH" value={d.titulo||""}
+            <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>{lang==="en"?"Professional profile":"Perfil profesional"}</div>
+            <Sel label={lang==="en"?"HSE degree":"Título en SyH"} value={d.titulo||""}
               onChange={v=>upd("titulo",v)}
               options={[
-                {v:"",l:"Seleccioná tu título..."},
-                {v:"no_aplica",l:"No aplica"},
-                {v:"est_syh",l:"Estudiante en Seguridad y Salud"},
-                {v:"tec_syh",l:"Técnico en Seguridad y Salud"},
-                {v:"aud_syh",l:"Auditor en Seguridad y Salud"},
-                {v:"lic_syh",l:"Licenciado en Seguridad y Salud"},
-                {v:"ing_syh",l:"Ingeniero en Seguridad y Salud"},
+                {v:"",l:lang==="en"?"Select your degree...":"Seleccioná tu título..."},
+                {v:"no_aplica",l:lang==="en"?"Not applicable":"No aplica"},
+                {v:"est_syh",l:lang==="en"?"Student in Health & Safety":"Estudiante en Seguridad y Salud"},
+                {v:"tec_syh",l:lang==="en"?"Health & Safety Technician":"Técnico en Seguridad y Salud"},
+                {v:"aud_syh",l:lang==="en"?"Health & Safety Auditor":"Auditor en Seguridad y Salud"},
+                {v:"lic_syh",l:lang==="en"?"Health & Safety Graduate":"Licenciado en Seguridad y Salud"},
+                {v:"ing_syh",l:lang==="en"?"Health & Safety Engineer":"Ingeniero en Seguridad y Salud"},
               ]}/>
-            <Sel label="Título en Medio Ambiente" optional value={d.tituloMA||""}
+            <Sel label={lang==="en"?"Environment degree":"Título en Medio Ambiente"} optional value={d.tituloMA||""}
               onChange={v=>upd("tituloMA",v)}
               options={[
-                {v:"",l:"Sin título en MA (opcional)"},
-                {v:"no_aplica",l:"No aplica"},
-                {v:"tec_ma",l:"Técnico en Medio Ambiente"},
-                {v:"aud_ma",l:"Auditor Ambiental"},
-                {v:"gest_ma",l:"Gestor Ambiental"},
-                {v:"lic_ma",l:"Licenciado en Ciencias Ambientales"},
-                {v:"ing_ma",l:"Ingeniero Ambiental"},
+                {v:"",l:lang==="en"?"No Environment degree (optional)":"Sin título en MA (opcional)"},
+                {v:"no_aplica",l:lang==="en"?"Not applicable":"No aplica"},
+                {v:"tec_ma",l:lang==="en"?"Environmental Technician":"Técnico en Medio Ambiente"},
+                {v:"aud_ma",l:lang==="en"?"Environmental Auditor":"Auditor Ambiental"},
+                {v:"gest_ma",l:lang==="en"?"Environmental Manager":"Gestor Ambiental"},
+                {v:"lic_ma",l:lang==="en"?"Environmental Sciences Graduate":"Licenciado en Ciencias Ambientales"},
+                {v:"ing_ma",l:lang==="en"?"Environmental Engineer":"Ingeniero Ambiental"},
               ]}/>
-            <Txt label="Descripción breve" optional value={d.perfil||""}
+            <Txt label={lang==="en"?"Brief description":"Descripción breve"} optional value={d.perfil||""}
               onChange={v=>upd("perfil",v)}
-              hint="Resumí tu experiencia en 2-3 oraciones"/>
+              hint={lang==="en"?"Summarize your experience in 2-3 sentences":"Resumí tu experiencia en 2-3 oraciones"}/>
             <SkillSelector label="Skills" selected={d.skills||[]} onChange={v=>upd("skills",v)}/>
             <ToggleSeguro pais={d.pais||"AR"} value={d.seguro} onChange={v=>upd("seguro",v)}/>
           </div>
         )}
         {esPro&&(
           <div style={{background:"#fff",borderRadius:16,padding:18,marginBottom:16,boxShadow:"0 2px 10px rgba(0,0,0,0.07)"}}>
-            <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>Honorarios</div>
+            <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:14}}>{lang==="en"?"Rates":"Honorarios"}</div>
             <Honorarios value={d.tarifa||""} moneda={d.moneda||"ARS"}
               onValue={v=>upd("tarifa",v)} onMoneda={v=>upd("moneda",v)}/>
-            <Inp label="Horario" optional value={d.horario||""}
-              onChange={v=>upd("horario",v)} placeholder="Ej: Lunes a viernes 8 a 17 hs"/>
+            <Inp label={lang==="en"?"Schedule":"Horario"} optional value={d.horario||""}
+              onChange={v=>upd("horario",v)} placeholder={lang==="en"?"E.g: Monday to Friday 8 to 5":"Ej: Lunes a viernes 8 a 17 hs"}/>
           </div>
         )}
         <button onClick={()=>onSave(d)}
           style={{width:"100%",padding:15,borderRadius:14,border:"none",background:"#1a1a2e",
             color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer",marginBottom:12,fontFamily:"inherit"}}>
-          Guardar cambios
+          {lang==="en"?"Save changes":"Guardar cambios"}
         </button>
         <button onClick={onClose}
           style={{width:"100%",padding:14,borderRadius:14,border:"1.5px solid #e0e0ef",
             background:"#fff",color:"#888",fontWeight:600,fontSize:14,cursor:"pointer",
             fontFamily:"inherit",marginBottom:32}}>
-          Cancelar
+          {lang==="en"?"Cancel":"Cancelar"}
         </button>
         <VerificacionSection
           verificado={verificado}
@@ -3031,6 +3109,7 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onDes
 // ─── SWIPE CARD ───────────────────────────────────────────────────────────────
 
 const SwipeCard = ({item,type,onSwipe,isTop}) => {
+  const {lang} = useLang();
   const [dx,setDx] = useState(0);
   const [dragging,setDragging] = useState(false);
   const [dec,setDec] = useState(null);
@@ -3075,14 +3154,14 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
         <div style={{position:"absolute",top:24,left:24,zIndex:10,padding:"8px 20px",
           borderRadius:8,border:"3px solid #2A9D8F",color:"#2A9D8F",fontWeight:800,
           fontSize:22,transform:"rotate(-12deg)",background:"#fff"}}>
-          INTERESA
+          {lang==="en"?"INTERESTED":"INTERESA"}
         </div>
       )}
       {dec==="no"&&(
         <div style={{position:"absolute",top:24,right:24,zIndex:10,padding:"8px 20px",
           borderRadius:8,border:"3px solid #E63946",color:"#E63946",fontWeight:800,
           fontSize:22,transform:"rotate(12deg)",background:"#fff"}}>
-          PASAR
+          {lang==="en"?"PASS":"PASAR"}
         </div>
       )}
       <div style={{background:"#fff",borderRadius:20,overflow:"hidden",
@@ -3091,7 +3170,7 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
         {p.esPro&&(
           <div style={{background:"linear-gradient(135deg,#F4A261,#e8853d)",
             padding:"4px 12px",display:"flex",alignItems:"center",gap:6}}>
-            <span style={{fontSize:11,fontWeight:800,color:"#1a1a2e"}}>⭐ PRO VERIFICADO</span>
+            <span style={{fontSize:11,fontWeight:800,color:"#1a1a2e"}}>⭐ {lang==="en"?"VERIFIED PRO":"PRO VERIFICADO"}</span>
           </div>
         )}
         <div style={{height:p.esPro?4:8,background:p.color}}/>
@@ -3108,10 +3187,10 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
                 </div>
                 {isPro&&(
                   <Chip selected color={p.disponible?"#2A9D8F":"#999"}>
-                    {p.disponible?"Disponible":"No disp."}
+                    {p.disponible?(lang==="en"?"Available":"Disponible"):(lang==="en"?"Unavailable":"No disp.")}
                   </Chip>
                 )}
-                {!isPro&&p.urgente&&<Chip selected color="#E63946">URGENTE</Chip>}
+                {!isPro&&p.urgente&&<Chip selected color="#E63946">{lang==="en"?"URGENT":"URGENTE"}</Chip>}
               </div>
               <div style={{fontSize:12,color:"#555",marginTop:5}}>
                 {p.ciudad}{(p.distanciaReal!=null) ? ` · ${p.distanciaReal} km de vos` : p.distancia ? ` · ${p.distancia} km` : ""}
@@ -3134,7 +3213,7 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
           </div>
           {isPro&&(
             <div style={{background:"#f8f8fc",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#aaa",marginBottom:5}}>OBRAS</div>
+              <div style={{fontSize:11,fontWeight:700,color:"#aaa",marginBottom:5}}>{lang==="en"?"PROJECTS":"OBRAS"}</div>
               {p.obras.map((o,i)=>(
                 <div key={i} style={{fontSize:12,color:"#444",padding:"2px 0"}}>· {o}</div>
               ))}
@@ -3142,7 +3221,7 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
           )}
           {!isPro&&(
             <div style={{background:"#f8f8fc",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
-              <div style={{fontSize:12,color:"#444"}}>Duración: {p.duracion}</div>
+              <div style={{fontSize:12,color:"#444"}}>{lang==="en"?"Duration":"Duración"}: {p.duracion}</div>
             </div>
           )}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -3158,11 +3237,11 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
                 <span style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:99,
                   background:p.seguro?"#e8f7f5":"#fdecea",
                   color:p.seguro?"#2A9D8F":"#E63946"}}>
-                  {p.seguro?"✓ Con seguro":"✕ Sin seguro"}
+                  {p.seguro?(lang==="en"?"✓ Insured":"✓ Con seguro"):(lang==="en"?"✕ Not insured":"✕ Sin seguro")}
                 </span>
               )}
               {isPro&&p.trabajos&&(
-                <span style={{fontSize:12,color:"#888"}}>{p.trabajos} trabajos</span>
+                <span style={{fontSize:12,color:"#888"}}>{p.trabajos} {lang==="en"?"jobs":"trabajos"}</span>
               )}
             </div>
           </div>
@@ -3173,6 +3252,7 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
 };
 
 const FeedItem = ({obra,onPostular,yaPostulado}) => {
+  const {lang} = useLang();
   const [shareOpen,setShareOpen] = useState(false);
   const [copied,setCopied]       = useState(false);
   const sym = obra.moneda==="USD"?"U$D":"$";
@@ -3187,7 +3267,7 @@ const FeedItem = ({obra,onPostular,yaPostulado}) => {
             <div style={{display:"flex",justifyContent:"space-between"}}>
               <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e"}}>{obra.empresa}</div>
               <div style={{display:"flex",gap:5,alignItems:"center"}}>
-                {obra.urgente&&<Chip selected color="#E63946">URGENTE</Chip>}
+                {obra.urgente&&<Chip selected color="#E63946">{lang==="en"?"URGENT":"URGENTE"}</Chip>}
                 {obra.esAdmin&&(
                   <span style={{background:"#fff3e0",color:"#F4A261",fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:99}}>
                     Safy
@@ -3203,14 +3283,14 @@ const FeedItem = ({obra,onPostular,yaPostulado}) => {
           {(obra.requisitos||[]).map((r,i)=><Chip key={i}>{r}</Chip>)}
           {obra.modalidad&&(
             <Chip color="#7B2D8B">
-              {obra.modalidad==="presencial"?"🏢 Presencial":obra.modalidad==="remoto"?"🏠 Remoto":"🔄 Híbrido"}
+              {obra.modalidad==="presencial"?(lang==="en"?"🏢 On-site":"🏢 Presencial"):obra.modalidad==="remoto"?(lang==="en"?"🏠 Remote":"🏠 Remoto"):(lang==="en"?"🔄 Hybrid":"🔄 Híbrido")}
             </Chip>
           )}
         </div>
         {/* Portales donde aparece */}
         {(obra.portales||[]).length>0&&(
           <div style={{marginBottom:10}}>
-            <div style={{fontSize:11,color:"#aaa",fontWeight:600,marginBottom:4}}>También en:</div>
+            <div style={{fontSize:11,color:"#aaa",fontWeight:600,marginBottom:4}}>{lang==="en"?"Also on:":"También en:"}</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
               {obra.portales.map((p,i)=>(
                 <span key={i} style={{fontSize:11,background:"#f0f0f8",color:"#666",
@@ -3224,7 +3304,7 @@ const FeedItem = ({obra,onPostular,yaPostulado}) => {
           <a href={obra.linkPostulacion} target="_blank" rel="noopener noreferrer"
             style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"#1a73e8",
               fontWeight:600,marginBottom:10,textDecoration:"none"}}>
-            🔗 Postulate en el portal externo ↗
+            🔗 {lang==="en"?"Apply on the external site ↗":"Postulate en el portal externo ↗"}
           </a>
         )}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -3237,7 +3317,7 @@ const FeedItem = ({obra,onPostular,yaPostulado}) => {
               color:yaPostulado?"#2A9D8F":"#fff",border:"none",borderRadius:99,
               padding:"8px 16px",fontWeight:700,fontSize:13,
               cursor:yaPostulado?"default":"pointer",fontFamily:"inherit"}}>
-            {yaPostulado?"Enviado":"Postularme"}
+            {yaPostulado?(lang==="en"?"Sent":"Enviado"):(lang==="en"?"Apply":"Postularme")}
           </button>
           {/* Compartir */}
           <div style={{position:"relative"}}>
@@ -3254,16 +3334,16 @@ const FeedItem = ({obra,onPostular,yaPostulado}) => {
                 minWidth:180,border:"1px solid #f0f0f0"}}>
                 <div style={{fontSize:11,fontWeight:700,color:"#aaa",
                   padding:"4px 10px 8px",textTransform:"uppercase",letterSpacing:.5}}>
-                  Compartir
+                  {lang==="en"?"Share":"Compartir"}
                 </div>
                 {[
-                  {icon:"🔗",label:"Copiar link",action:()=>{
+                  {icon:"🔗",label:lang==="en"?"Copy link":"Copiar link",action:()=>{
                     navigator.clipboard&&navigator.clipboard.writeText("https://safyjobs.com/oportunidad/"+obra.id);
                     setShareOpen(false);setCopied(true);setTimeout(()=>setCopied(false),2000);
                   }},
                   {icon:"💬",label:"WhatsApp",action:()=>{
                     window.open("https://wa.me/?text="+encodeURIComponent(
-                      "Mirá esta oportunidad en Safy: "+obra.empresa+" busca en "+obra.ciudad+". https://safyjobs.com/oportunidad/"+obra.id));
+                      (lang==="en"?"Check out this opportunity on Safy: ":"Mirá esta oportunidad en Safy: ")+obra.empresa+(lang==="en"?" is hiring in ":" busca en ")+obra.ciudad+". https://safyjobs.com/oportunidad/"+obra.id));
                     setShareOpen(false);
                   }},
                   {icon:"💼",label:"LinkedIn",action:()=>{
@@ -3280,7 +3360,7 @@ const FeedItem = ({obra,onPostular,yaPostulado}) => {
                     {icon} {label}
                   </button>
                 ))}
-                {copied&&<div style={{fontSize:11,color:"#2A9D8F",padding:"2px 12px 6px",fontWeight:600}}>✓ Link copiado</div>}
+                {copied&&<div style={{fontSize:11,color:"#2A9D8F",padding:"2px 12px 6px",fontWeight:600}}>{lang==="en"?"✓ Link copied":"✓ Link copiado"}</div>}
               </div>
             )}
           </div>
@@ -3291,8 +3371,9 @@ const FeedItem = ({obra,onPostular,yaPostulado}) => {
 };
 
 const MatchPop = ({item,userData,onClose,onGoToMatches}) => {
+  const {lang} = useLang();
   const myEmail = userData.email||"—";
-  const myTel   = userData.tel||"No indicado";
+  const myTel   = userData.tel||(lang==="en"?"Not specified":"No indicado");
   const myInit = userData.nombre
     ? (userData.nombre[0]+((userData.apellido||" ")[0])).toUpperCase()
     : (userData.empresa||"??").slice(0,2).toUpperCase();
@@ -3302,11 +3383,13 @@ const MatchPop = ({item,userData,onClose,onGoToMatches}) => {
       <div style={{background:"#fff",borderRadius:24,padding:28,maxWidth:340,width:"100%",
         textAlign:"center",animation:"popIn .3s ease"}}>
         <div style={{fontSize:44,marginBottom:6}}>🤝</div>
-        <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:4}}>Nueva conexión!</div>
+        <div style={{fontWeight:800,fontSize:22,color:"#1a1a2e",marginBottom:4}}>{lang==="en"?"New connection!":"Nueva conexión!"}</div>
         <div style={{color:"#666",fontSize:13,marginBottom:20,lineHeight:1.5}}>
-          Vos y{" "}
-          <strong style={{color:"#1a1a2e"}}>{item.nombre||item.empresa}</strong>{" "}
-          confirmaron interés profesional mutuo.
+          {lang==="en"?(
+            <>You and{" "}<strong style={{color:"#1a1a2e"}}>{item.nombre||item.empresa}</strong>{" "}confirmed mutual professional interest.</>
+          ):(
+            <>Vos y{" "}<strong style={{color:"#1a1a2e"}}>{item.nombre||item.empresa}</strong>{" "}confirmaron interés profesional mutuo.</>
+          )}
         </div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:20}}>
           <Av init={myInit} color="#1a1a2e" size={52} foto={userData.foto||""}/>
@@ -3315,14 +3398,14 @@ const MatchPop = ({item,userData,onClose,onGoToMatches}) => {
         </div>
         <div style={{background:"#f8f8fc",borderRadius:14,padding:"14px 16px",marginBottom:12,textAlign:"left"}}>
           <div style={{fontSize:11,fontWeight:700,color:"#aaa",marginBottom:8,textTransform:"uppercase"}}>
-            Contacto de {item.nombre||item.empresa}
+            {lang==="en"?"Contact info for ":"Contacto de "}{item.nombre||item.empresa}
           </div>
-          <div style={{fontSize:13,color:"#1a73e8",fontWeight:600,marginBottom:4}}>{item.email||"contacto@safyjobs.com"}</div>
+          <div style={{fontSize:13,color:"#1a73e8",fontWeight:600,marginBottom:4}}>{item.email||"contact@safyjobs.com"}</div>
           <div style={{fontSize:13,color:"#1a1a2e",fontWeight:600}}>{item.tel||"—"}</div>
         </div>
         <div style={{background:"#fffbf3",borderRadius:14,padding:"11px 16px",marginBottom:20,
           textAlign:"left",border:"1.5px solid #F4A261"}}>
-          <div style={{fontSize:11,fontWeight:700,color:"#c97e1a",marginBottom:4}}>Tu info compartida</div>
+          <div style={{fontSize:11,fontWeight:700,color:"#c97e1a",marginBottom:4}}>{lang==="en"?"Your shared info":"Tu info compartida"}</div>
           <div style={{fontSize:13,color:"#444"}}>{myEmail}</div>
           <div style={{fontSize:13,color:"#444",marginTop:2}}>{myTel}</div>
         </div>
@@ -3331,13 +3414,13 @@ const MatchPop = ({item,userData,onClose,onGoToMatches}) => {
             style={{flex:1,background:"#f0f0f8",color:"#1a1a2e",border:"none",
               borderRadius:99,padding:"13px 0",fontWeight:700,cursor:"pointer",
               fontSize:13,fontFamily:"inherit"}}>
-            Seguir explorando
+            {lang==="en"?"Keep exploring":"Seguir explorando"}
           </button>
           <button onClick={onGoToMatches}
             style={{flex:1,background:"#1a1a2e",color:"#fff",border:"none",
               borderRadius:99,padding:"13px 0",fontWeight:700,cursor:"pointer",
               fontSize:13,fontFamily:"inherit"}}>
-            Ver conexiones
+            {lang==="en"?"View connections":"Ver conexiones"}
           </button>
         </div>
       </div>
@@ -3348,6 +3431,7 @@ const MatchPop = ({item,userData,onClose,onGoToMatches}) => {
 // ─── NUEVA BÚSQUEDA MODAL (profesional) ──────────────────────────────────────
 
 const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActivas,setMisBusquedas,setObras,onSuscribir,toast_,onClose,busquedaEditar,idxEditar}) => {
+  const {lang} = useLang();
   var esEdicion = busquedaEditar!=null;
   var init = busquedaEditar||{};
   const [titulo,  setTitulo]  = useState(init.descripcion||init.titulo||"");
@@ -3409,8 +3493,8 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
     setImportError("");
     try {
       const prompt = importMode === "url"
-        ? `Analizá este aviso de empleo de la URL: ${contenido}\n\nExtrae la información y devolvé SOLO un JSON válido (sin markdown):\n{"titulo":"","empresa":"","ciudad":"","tipo":"","descripcion":"","presupuesto":0,"moneda":"ARS","urgente":false,"modalidad":"presencial","requisitos":[]}`
-        : `Analizá este texto de aviso de empleo:\n\n${contenido}\n\nExtrae la información y devolvé SOLO un JSON válido (sin markdown):\n{"titulo":"","empresa":"","ciudad":"","tipo":"","descripcion":"","presupuesto":0,"moneda":"ARS","urgente":false,"modalidad":"presencial","requisitos":[]}`;
+        ? `Analyze this job listing from the URL: ${contenido}\n\nExtract the information and return ONLY valid JSON (no markdown):\n{"titulo":"","empresa":"","ciudad":"","tipo":"","descripcion":"","presupuesto":0,"moneda":"ARS","urgente":false,"modalidad":"presencial","requisitos":[]}`
+        : `Analyze this job listing text:\n\n${contenido}\n\nExtract the information and return ONLY valid JSON (no markdown):\n{"titulo":"","empresa":"","ciudad":"","tipo":"","descripcion":"","presupuesto":0,"moneda":"ARS","urgente":false,"modalidad":"presencial","requisitos":[]}`;
 
       const r = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -3424,7 +3508,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
       const data = await r.json();
       const text = data.content?.[0]?.text || "";
       const match = text.match(/\{[\s\S]*\}/);
-      if(!match) throw new Error("No se pudo extraer la información");
+      if(!match) throw new Error(lang==="en"?"Couldn't extract the information":"No se pudo extraer la información");
       const info = JSON.parse(match[0]);
       if(info.titulo)      setTitulo(info.titulo);
       if(info.descripcion) setDesc(info.descripcion);
@@ -3437,9 +3521,9 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
       if(info.requisitos?.length) setRequisitos(info.requisitos);
       setShowImport(false);
       setImportUrl(""); setImportTexto("");
-      toast_("✓ Aviso importado correctamente");
+      toast_(lang==="en"?"✓ Listing imported successfully":"✓ Aviso importado correctamente");
     } catch(e) {
-      setImportError("No pudimos procesar eso. Probá pegando el texto del aviso directamente.");
+      setImportError(lang==="en"?"We couldn't process that. Try pasting the listing text directly.":"No pudimos procesar eso. Probá pegando el texto del aviso directamente.");
     }
     setImporting(false);
   };
@@ -3454,10 +3538,10 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
       var estadoNuevo = limiteAlcanzado?"pausada":"activa";
       var nuevo = {
         id:esEdicion?busquedaEditar.id:Date.now(),
-        empresa:confidencial?"Empresa confidencial":(esEmpresa?(userData.empresa||empNombre):(empresaNombre||empNombre)),
+        empresa:confidencial?(lang==="en"?"Confidential company":"Empresa confidencial"):(esEmpresa?(userData.empresa||empNombre):(empresaNombre||empNombre)),
         confidencial:confidencial,
-        tipo:tipo||"Busqueda",ciudad:ciudad,distancia:5,
-        presupuesto:Number(pres)||0,moneda:moneda,duracion:"A convenir",urgente:urgente,
+        tipo:tipo||(lang==="en"?"Listing":"Busqueda"),ciudad:ciudad,distancia:5,
+        presupuesto:Number(pres)||0,moneda:moneda,duracion:lang==="en"?"To be agreed":"A convenir",urgente:urgente,
         descripcion:desc||titulo,requisitos:requisitos.length?requisitos:[titulo],
         modalidad:modalidad, portales:portales, linkPostulacion:linkPostulacion,
         avatar:confidencial?"??":(empresaNombre||empNombre).slice(0,2).toUpperCase(),
@@ -3467,18 +3551,18 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
       };
       if(esEdicion){
         setObras(function(prev){return prev.map(function(x){return x.id===busquedaEditar.id?nuevo:x;});});
-        toast_("Aviso actualizado");
+        toast_(lang==="en"?"Listing updated":"Aviso actualizado");
       } else {
         setObras(function(prev){return [...prev,nuevo];});
-        toast_(limiteAlcanzado?"Aviso guardado en espera — verificá tu empresa para activarlo":"Aviso publicado");
+        toast_(limiteAlcanzado?(lang==="en"?"Listing saved on hold — verify your company to activate it":"Aviso guardado en espera — verificá tu empresa para activarlo"):(lang==="en"?"Listing published":"Aviso publicado"));
       }
     } else {
       var nombre = ((userData.nombre||"")+" "+(userData.apellido||"")).trim();
       var limitePro = !esPro&&!esEdicion&&(obrasActivas||0)>=3;
       var nb = {
         id:esEdicion?busquedaEditar.id:Date.now(),
-        empresa:nombre||"Profesional",tipo:"Busqueda puntual",ciudad:ciudad,distancia:2,
-        presupuesto:Number(pres)||0,moneda:moneda,duracion:"A convenir",urgente:false,
+        empresa:nombre||(lang==="en"?"Professional":"Profesional"),tipo:lang==="en"?"One-off listing":"Busqueda puntual",ciudad:ciudad,distancia:2,
+        presupuesto:Number(pres)||0,moneda:moneda,duracion:lang==="en"?"To be agreed":"A convenir",urgente:false,
         descripcion:desc||titulo,requisitos:[],avatar:uInit,color:"#2A9D8F",
         email:userData.email||"",tel:userData.tel||"",esProfesional:true,
         seguro:seguro,estado:esEdicion?(busquedaEditar.estado||"activa"):(limitePro?"pausada":"activa"),
@@ -3488,10 +3572,10 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
       };
       if(esEdicion){
         setMisBusquedas(function(prev){return prev.map(function(x,j){return j===idxEditar?nb:x;});});
-        toast_("Busqueda actualizada");
+        toast_(lang==="en"?"Listing updated":"Busqueda actualizada");
       } else {
         setMisBusquedas(function(prev){return [...prev,nb];});
-        toast_(limitePro?"Aviso guardado en espera — suscribite para activarlo":"Busqueda publicada");
+        toast_(limitePro?(lang==="en"?"Listing saved on hold — subscribe to activate it":"Aviso guardado en espera — suscribite para activarlo"):(lang==="en"?"Listing published":"Busqueda publicada"));
       }
     }
     onClose();
@@ -3513,7 +3597,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
         width:"100%",maxWidth:420,maxHeight:"90vh",overflowY:"auto",animation:"slideUp .25s ease"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
           <div style={{fontWeight:800,fontSize:18,color:"#1a1a2e"}}>
-            {esEdicion?(esEmpresa?"Editar aviso":"Editar busqueda"):(esEmpresa?"Nuevo aviso":"Nueva busqueda")}
+            {esEdicion?(esEmpresa?(lang==="en"?"Edit listing":"Editar aviso"):(lang==="en"?"Edit search":"Editar busqueda")):(esEmpresa?(lang==="en"?"New listing":"Nuevo aviso"):(lang==="en"?"New search":"Nueva busqueda"))}
           </div>
           <button onClick={onClose}
             style={{background:"none",border:"none",fontSize:22,color:"#aaa",cursor:"pointer",fontFamily:"inherit"}}>
@@ -3527,37 +3611,38 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
             marginBottom:14,border:"1.5px solid #86efac",display:"flex",gap:8,alignItems:"flex-start"}}>
             <span style={{fontSize:16,flexShrink:0}}>💡</span>
             <div style={{fontSize:12,color:"#15803d",lineHeight:1.5}}>
-              <strong>Tip:</strong> Copiá el título y descripción del aviso desde LinkedIn, 
-              Computrabajo u otro portal y pegalo en los campos de abajo.
+              <strong>Tip:</strong> {lang==="en"
+                ?"Copy the title and description from LinkedIn, Indeed or another portal and paste it in the fields below."
+                :"Copiá el título y descripción del aviso desde LinkedIn, Computrabajo u otro portal y pegalo en los campos de abajo."}
             </div>
           </div>
         )}
 
         {esEmpresa?(
           <>
-            <Inp label="Puesto buscado *" placeholder="Ej: Tecnico SyH para obra en altura"
+            <Inp label={lang==="en"?"Position needed *":"Puesto buscado *"} placeholder={lang==="en"?"E.g: HSE Technician for work at height":"Ej: Tecnico SyH para obra en altura"}
               value={titulo} onChange={setTitulo}/>
-            <Inp label="Tipo de obra / proyecto" optional placeholder="Ej: Obra civil"
+            <Inp label={lang==="en"?"Project type":"Tipo de obra / proyecto"} optional placeholder={lang==="en"?"E.g: Civil works":"Ej: Obra civil"}
               value={tipo} onChange={setTipo}/>
           </>
         ):(
-          <Inp label="Que necesitas? *" placeholder="Ej: Tecnico SyH para obra en altura"
+          <Inp label={lang==="en"?"What do you need? *":"Que necesitas? *"} placeholder={lang==="en"?"E.g: HSE Technician for work at height":"Ej: Tecnico SyH para obra en altura"}
             value={titulo} onChange={setTitulo}/>
         )}
-        <Inp label="Ciudad / Zona *" placeholder="Ej: Palermo, CABA" value={ciudad} onChange={setCiudad}/>
-        <Txt label="Descripcion" optional value={desc} onChange={setDesc}
-          placeholder={esEmpresa?"Describe el proyecto y requisitos...":"Mas detalles..."}/>
+        <Inp label={lang==="en"?"City / Area *":"Ciudad / Zona *"} placeholder={lang==="en"?"E.g: Downtown Miami":"Ej: Palermo, CABA"} value={ciudad} onChange={setCiudad}/>
+        <Txt label={lang==="en"?"Description":"Descripcion"} optional value={desc} onChange={setDesc}
+          placeholder={esEmpresa?(lang==="en"?"Describe the project and requirements...":"Describe el proyecto y requisitos..."):(lang==="en"?"More details...":"Mas detalles...")}/>
 
         {/* Modalidad */}
         <div style={{marginBottom:18}}>
           <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
-            Modalidad de trabajo
+            {lang==="en"?"Work mode":"Modalidad de trabajo"}
           </label>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {[
-              {v:"presencial",l:"🏢 Presencial"},
-              {v:"remoto",l:"🏠 Remoto"},
-              {v:"hibrido",l:"🔄 Híbrido"},
+              {v:"presencial",l:lang==="en"?"🏢 On-site":"🏢 Presencial"},
+              {v:"remoto",l:lang==="en"?"🏠 Remote":"🏠 Remoto"},
+              {v:"hibrido",l:lang==="en"?"🔄 Hybrid":"🔄 Híbrido"},
             ].map(m=>(
               <button key={m.v} onClick={()=>setModalidad(m.v)}
                 style={{padding:"8px 14px",borderRadius:99,fontSize:13,fontWeight:700,
@@ -3578,10 +3663,12 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
               border:"1.5px solid #e0e0ef",background:"#fff"}}>
             <div>
               <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>
-                Requisitos <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+                {lang==="en"?"Requirements":"Requisitos"} <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>{lang==="en"?"Optional":"Opcional"}</span>
               </div>
               <div style={{fontSize:12,color:"#888",marginTop:2}}>
-                {requisitos.length===0?"Sin requisitos definidos":requisitos.length+" seleccionado"+(requisitos.length!==1?"s":"")}
+                {requisitos.length===0
+                  ?(lang==="en"?"No requirements set":"Sin requisitos definidos")
+                  :(lang==="en"?requisitos.length+" selected":requisitos.length+" seleccionado"+(requisitos.length!==1?"s":""))}
               </div>
             </div>
             <span style={{fontSize:16,color:"#888",transform:reqOpen?"rotate(180deg)":"none",
@@ -3592,22 +3679,22 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
           {reqOpen&&(
             <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:8}}>
               {[
-                {v:"sin_requisitos",    l:"Sin requisitos / Cualquier título"},
-                {v:"est_syh",           l:"Estudiante en Seguridad y Salud"},
-                {v:"tec_syh",           l:"Técnico en Seguridad y Salud"},
-                {v:"aud_syh",           l:"Auditor en Seguridad y Salud"},
-                {v:"lic_syh",           l:"Licenciado en Seguridad y Salud"},
-                {v:"ing_syh",           l:"Ingeniero en Seguridad y Salud"},
-                {v:"est_ma",            l:"Estudiante en Medio Ambiente"},
-                {v:"tec_ma",            l:"Técnico en Medio Ambiente"},
-                {v:"aud_ma",            l:"Auditor Ambiental"},
-                {v:"gest_ma",           l:"Gestor Ambiental"},
-                {v:"lic_ma",            l:"Licenciado en Ciencias Ambientales"},
-                {v:"ing_ma",            l:"Ingeniero Ambiental"},
-                {v:"osha30_con",        l:"OSHA 30 — Construcción"},
-                {v:"osha30_ind",        l:"OSHA 30 — Industria General"},
-                {v:"iso45001",          l:"Especialista ISO 45001"},
-                {v:"otros",             l:"Otros (especificar en descripción)"},
+                {v:"sin_requisitos",    l:lang==="en"?"No requirements / Any degree":"Sin requisitos / Cualquier título"},
+                {v:"est_syh",           l:lang==="en"?"Student in Health & Safety":"Estudiante en Seguridad y Salud"},
+                {v:"tec_syh",           l:lang==="en"?"Health & Safety Technician":"Técnico en Seguridad y Salud"},
+                {v:"aud_syh",           l:lang==="en"?"Health & Safety Auditor":"Auditor en Seguridad y Salud"},
+                {v:"lic_syh",           l:lang==="en"?"Health & Safety Graduate":"Licenciado en Seguridad y Salud"},
+                {v:"ing_syh",           l:lang==="en"?"Health & Safety Engineer":"Ingeniero en Seguridad y Salud"},
+                {v:"est_ma",            l:lang==="en"?"Student in Environment":"Estudiante en Medio Ambiente"},
+                {v:"tec_ma",            l:lang==="en"?"Environmental Technician":"Técnico en Medio Ambiente"},
+                {v:"aud_ma",            l:lang==="en"?"Environmental Auditor":"Auditor Ambiental"},
+                {v:"gest_ma",           l:lang==="en"?"Environmental Manager":"Gestor Ambiental"},
+                {v:"lic_ma",            l:lang==="en"?"Environmental Sciences Graduate":"Licenciado en Ciencias Ambientales"},
+                {v:"ing_ma",            l:lang==="en"?"Environmental Engineer":"Ingeniero Ambiental"},
+                {v:"osha30_con",        l:"OSHA 30 — Construction"},
+                {v:"osha30_ind",        l:lang==="en"?"OSHA 30 — General Industry":"OSHA 30 — Industria General"},
+                {v:"iso45001",          l:lang==="en"?"ISO 45001 Specialist":"Especialista ISO 45001"},
+                {v:"otros",             l:lang==="en"?"Other (specify in description)":"Otros (especificar en descripción)"},
               ].map(r=>{
                 const sel = requisitos.includes(r.v);
                 const toggle = () => {
@@ -3646,7 +3733,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
         {/* Empresa que publica */}
         <div style={{marginBottom:18}}>
           <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
-            {esEmpresa?"Empresa":"Empresa que busca"}
+            {esEmpresa?(lang==="en"?"Company":"Empresa"):(lang==="en"?"Hiring company":"Empresa que busca")}
           </label>
           {esEmpresa ? (
             // Para empresa: mostrar nombre del perfil + opción confidencial
@@ -3655,16 +3742,16 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
                 marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
                   <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>
-                    {confidencial?"🔒 Empresa confidencial":(userData.empresa||"Mi Empresa")}
+                    {confidencial?(lang==="en"?"🔒 Confidential company":"🔒 Empresa confidencial"):(userData.empresa||(lang==="en"?"My Company":"Mi Empresa"))}
                   </div>
-                  <div style={{fontSize:11,color:"#888",marginTop:2}}>Nombre de tu empresa en el perfil</div>
+                  <div style={{fontSize:11,color:"#888",marginTop:2}}>{lang==="en"?"Your company name from your profile":"Nombre de tu empresa en el perfil"}</div>
                 </div>
                 <button onClick={()=>setConfidencial(c=>!c)}
                   style={{padding:"6px 12px",borderRadius:99,fontSize:12,fontWeight:700,
                     border:confidencial?"2px solid #E63946":"1.5px solid #e0e0ef",
                     background:confidencial?"#fdecea":"#fff",
                     color:confidencial?"#E63946":"#888",cursor:"pointer",fontFamily:"inherit"}}>
-                  {confidencial?"🔒 Confidencial":"Marcar confidencial"}
+                  {confidencial?(lang==="en"?"🔒 Confidential":"🔒 Confidencial"):(lang==="en"?"Mark as confidential":"Marcar confidencial")}
                 </button>
               </div>
             </div>
@@ -3672,7 +3759,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
             // Para profesional: toggle + campo de texto
             <div>
               <div style={{display:"flex",gap:8,marginBottom:8}}>
-                {[{v:false,l:"🏢 Mostrar empresa"},{v:true,l:"🔒 Confidencial"}].map(op=>(
+                {[{v:false,l:lang==="en"?"🏢 Show company":"🏢 Mostrar empresa"},{v:true,l:lang==="en"?"🔒 Confidential":"🔒 Confidencial"}].map(op=>(
                   <button key={String(op.v)}
                     onClick={()=>{
                       if(op.v) { setEmpresaNombre(""); setConfidencial(true); }
@@ -3688,7 +3775,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
               </div>
               {!confidencial&&(
                 <input value={empresaNombre} onChange={e=>setEmpresaNombre(e.target.value)}
-                  placeholder="Nombre de la empresa..."
+                  placeholder={lang==="en"?"Company name...":"Nombre de la empresa..."}
                   style={{width:"100%",padding:"12px 14px",borderRadius:12,
                     border:"1.5px solid #e0e0ef",fontSize:14,outline:"none",
                     boxSizing:"border-box",fontFamily:"inherit"}}/>
@@ -3696,7 +3783,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
               {confidencial&&(
                 <div style={{background:"#f8f8fc",borderRadius:10,padding:"10px 14px",
                   fontSize:12,color:"#888"}}>
-                  El nombre no será visible para los candidatos.
+                  {lang==="en"?"The name won't be visible to candidates.":"El nombre no será visible para los candidatos."}
                 </div>
               )}
             </div>
@@ -3706,9 +3793,9 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
         {/* Portales — selector desplegable */}
         <div style={{marginBottom:18}}>
           <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:4}}>
-            Este aviso también aparece en
+            {lang==="en"?"This listing also appears on":"Este aviso también aparece en"}
           </label>
-          <div style={{fontSize:12,color:"#888",marginBottom:8}}>Opcional</div>
+          <div style={{fontSize:12,color:"#888",marginBottom:8}}>{lang==="en"?"Optional":"Opcional"}</div>
           <select
             onChange={e=>{
               const v = e.target.value;
@@ -3721,7 +3808,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
               WebkitAppearance:"none",boxSizing:"border-box",fontFamily:"inherit",
               backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\")",
               backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center"}}>
-            <option value="">Seleccioná un portal...</option>
+            <option value="">{lang==="en"?"Select a portal...":"Seleccioná un portal..."}</option>
             <optgroup label="🌎 LATAM">
               <option value="Computrabajo">Computrabajo (AR/MX/CO/PE/CL)</option>
               <option value="ZonaJobs">ZonaJobs (AR)</option>
@@ -3768,16 +3855,16 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
         </div>
 
         {/* Link de postulación */}
-        <Inp label="Postulate en este link" optional
+        <Inp label={lang==="en"?"Apply at this link":"Postulate en este link"} optional
           placeholder="https://www.linkedin.com/jobs/view/..."
-          hint="Si querés que los candidatos postulen en otro portal"
+          hint={lang==="en"?"If you want candidates to apply on another portal":"Si querés que los candidatos postulen en otro portal"}
           value={linkPostulacion} onChange={setLinkPostulacion}/>
         {esEmpresa&&(
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
             background:"#f8f8fc",borderRadius:12,padding:"12px 14px",marginBottom:18}}>
             <div>
-              <div style={{fontWeight:700,fontSize:13,color:"#1a1a2e"}}>Marcar como urgente</div>
-              <div style={{fontSize:11,color:"#888"}}>Badge rojo destacado</div>
+              <div style={{fontWeight:700,fontSize:13,color:"#1a1a2e"}}>{lang==="en"?"Mark as urgent":"Marcar como urgente"}</div>
+              <div style={{fontSize:11,color:"#888"}}>{lang==="en"?"Highlighted red badge":"Badge rojo destacado"}</div>
             </div>
             <button onClick={function(){setUrgente(function(u){return !u;});}}
               style={{width:44,height:26,borderRadius:99,border:"none",
@@ -3793,14 +3880,16 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
           style={{width:"100%",padding:14,borderRadius:14,border:"none",
             background:ok?"#1a1a2e":"#ccc",color:"#fff",fontWeight:800,fontSize:15,
             cursor:ok?"pointer":"not-allowed",fontFamily:"inherit",marginBottom:esEdicion?10:0}}>
-          {esEdicion?(esEmpresa?"Guardar aviso":"Guardar cambios"):(esEmpresa?"Publicar aviso":"Publicar busqueda")}
+          {esEdicion
+            ?(esEmpresa?(lang==="en"?"Save listing":"Guardar aviso"):(lang==="en"?"Save changes":"Guardar cambios"))
+            :(esEmpresa?(lang==="en"?"Publish listing":"Publicar aviso"):(lang==="en"?"Publish search":"Publicar busqueda"))}
         </button>
         {esEdicion&&(
           <button onClick={eliminar}
             style={{width:"100%",padding:13,borderRadius:14,border:"1.5px solid #fdecea",
               background:"#fdecea",color:"#E63946",fontWeight:700,fontSize:14,
               cursor:"pointer",fontFamily:"inherit"}}>
-            Eliminar {esEmpresa?"aviso":"busqueda"}
+            {lang==="en"?"Delete "+(esEmpresa?"listing":"search"):"Eliminar "+(esEmpresa?"aviso":"busqueda")}
           </button>
         )}
       </div>
@@ -3812,6 +3901,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 
 const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, setPostViendo, toast_}) => {
+  const {lang} = useLang();
   const feedItems = obras.filter(o=>!posts.includes(o.id)&&!feedSkips.includes(o.id));
   const obraActual = feedItems[0] || null;
   const totalVistas = posts.filter(id=>obras.some(o=>o.id===id)).length;
@@ -3823,7 +3913,7 @@ const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, se
   const onMove  = cx => { if(!dragging) return; setDragX(cx-startX); };
   const onEnd   = () => {
     if(!dragging) return; setDragging(false);
-    if(dragX>80 && obraActual){ setPosts(p=>[...p,obraActual.id]); toast_("Postulación enviada a "+obraActual.empresa); setDragX(0); }
+    if(dragX>80 && obraActual){ setPosts(p=>[...p,obraActual.id]); toast_(lang==="en"?"Application sent to "+obraActual.empresa:"Postulación enviada a "+obraActual.empresa); setDragX(0); }
     else if(dragX<-80 && obraActual){ setFeedSkips(p=>[...p,obraActual.id]); setDragX(0); }
     else setDragX(0);
   };
@@ -3831,8 +3921,8 @@ const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, se
   if(!obraActual) return (
     <div style={{textAlign:"center",padding:"60px 20px",color:"#999"}}>
       <div style={{fontSize:48,marginBottom:12}}>🎉</div>
-      <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>¡Revisaste todas las oportunidades!</div>
-      <div style={{fontSize:13,lineHeight:1.5}}>Volvé más tarde para ver nuevas búsquedas en tu zona.</div>
+      <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>{lang==="en"?"You've reviewed all opportunities!":"¡Revisaste todas las oportunidades!"}</div>
+      <div style={{fontSize:13,lineHeight:1.5}}>{lang==="en"?"Check back later for new listings in your area.":"Volvé más tarde para ver nuevas búsquedas en tu zona."}</div>
     </div>
   );
 
@@ -3841,13 +3931,13 @@ const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, se
   return (
     <div>
       <div style={{fontSize:13,color:"#888",marginBottom:12,display:"flex",justifyContent:"space-between"}}>
-        <span>{feedItems.length} oportunidades restantes</span>
-        {totalVistas>0&&<span style={{color:"#2A9D8F",fontWeight:600}}>{totalVistas} enviadas ✓</span>}
+        <span>{feedItems.length} {lang==="en"?"opportunities left":"oportunidades restantes"}</span>
+        {totalVistas>0&&<span style={{color:"#2A9D8F",fontWeight:600}}>{totalVistas} {lang==="en"?"sent ✓":"enviadas ✓"}</span>}
       </div>
       {/* Indicadores direccionales */}
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,padding:"0 4px"}}>
-        <span style={{fontSize:12,color:dragX<-40?"#E63946":"transparent",fontWeight:700,transition:"color .15s"}}>← Pasar</span>
-        <span style={{fontSize:12,color:dragX>40?"#2A9D8F":"transparent",fontWeight:700,transition:"color .15s"}}>Postularme →</span>
+        <span style={{fontSize:12,color:dragX<-40?"#E63946":"transparent",fontWeight:700,transition:"color .15s"}}>{lang==="en"?"← Pass":"← Pasar"}</span>
+        <span style={{fontSize:12,color:dragX>40?"#2A9D8F":"transparent",fontWeight:700,transition:"color .15s"}}>{lang==="en"?"Apply →":"Postularme →"}</span>
       </div>
       {/* Card swipeable */}
       <div
@@ -3862,8 +3952,8 @@ const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, se
           boxShadow:"0 2px 16px rgba(0,0,0,0.1)",
           overflow:"hidden",
         }}>
-        {dragX>40&&<div style={{position:"absolute",top:16,right:16,zIndex:10,background:"#2A9D8F",borderRadius:99,padding:"6px 14px",fontWeight:800,fontSize:13,color:"#fff"}}>POSTULARME ✓</div>}
-        {dragX<-40&&<div style={{position:"absolute",top:16,left:16,zIndex:10,background:"#E63946",borderRadius:99,padding:"6px 14px",fontWeight:800,fontSize:13,color:"#fff"}}>PASAR ✕</div>}
+        {dragX>40&&<div style={{position:"absolute",top:16,right:16,zIndex:10,background:"#2A9D8F",borderRadius:99,padding:"6px 14px",fontWeight:800,fontSize:13,color:"#fff"}}>{lang==="en"?"APPLY ✓":"POSTULARME ✓"}</div>}
+        {dragX<-40&&<div style={{position:"absolute",top:16,left:16,zIndex:10,background:"#E63946",borderRadius:99,padding:"6px 14px",fontWeight:800,fontSize:13,color:"#fff"}}>{lang==="en"?"PASS ✕":"PASAR ✕"}</div>}
         <div style={{height:5,background:obraActual.color||"#2A9D8F"}}/>
         <div style={{padding:18}}>
           <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:14}}>
@@ -3873,7 +3963,7 @@ const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, se
             <div style={{flex:1}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                 <div style={{fontWeight:800,fontSize:16,color:"#1a1a2e"}}>{obraActual.empresa}</div>
-                {obraActual.urgente&&<span style={{background:"#E63946",color:"#fff",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:99,flexShrink:0}}>URGENTE</span>}
+                {obraActual.urgente&&<span style={{background:"#E63946",color:"#fff",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:99,flexShrink:0}}>{lang==="en"?"URGENT":"URGENTE"}</span>}
               </div>
               <div style={{fontSize:12,color:"#888",marginTop:2}}>{obraActual.tipo} · {obraActual.ciudad}</div>
             </div>
@@ -3893,7 +3983,7 @@ const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, se
             </div>
             <button onClick={e=>{e.stopPropagation();setPostViendo(obraActual);}}
               style={{background:"#f0f0f8",border:"none",borderRadius:99,padding:"7px 14px",fontSize:12,fontWeight:600,color:"#1a1a2e",cursor:"pointer",fontFamily:"inherit"}}>
-              Ver más ↗
+              {lang==="en"?"See more ↗":"Ver más ↗"}
             </button>
           </div>
         </div>
@@ -3906,14 +3996,14 @@ const OportunidadesSwipe = ({obras, posts, feedSkips, setPosts, setFeedSkips, se
             fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
           ✕
         </button>
-        <button onClick={()=>{setPosts(p=>[...p,obraActual.id]);toast_("Postulación enviada a "+obraActual.empresa);}}
+        <button onClick={()=>{setPosts(p=>[...p,obraActual.id]);toast_(lang==="en"?"Application sent to "+obraActual.empresa:"Postulación enviada a "+obraActual.empresa);}}
           style={{width:56,height:56,borderRadius:"50%",border:"1.5px solid #2A9D8F",
             background:"#fff",color:"#2A9D8F",fontSize:20,cursor:"pointer",
             fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
           ✓
         </button>
       </div>
-      <div style={{textAlign:"center",color:"#bbb",fontSize:12,marginTop:10}}>Deslizá o usá los botones</div>
+      <div style={{textAlign:"center",color:"#bbb",fontSize:12,marginTop:10}}>{lang==="en"?"Swipe or use the buttons":"Deslizá o usá los botones"}</div>
     </div>
   );
 };
@@ -4023,7 +4113,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         }
       } catch(e) {
         console.error("Error cargando perfiles:", e);
-        toast_("No pudimos cargar los perfiles. Probá recargar la app.","#E63946");
+        toast_(lang==="en"?"We couldn't load profiles. Try reloading the app.":"No pudimos cargar los perfiles. Probá recargar la app.","#E63946");
       }
       setLoadingProfiles(false);
     };
@@ -4064,7 +4154,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           } catch(e) { console.error("Error cargando match:", e); }
           return {
             id: r.user2_id,
-            nombre: "Conexión",
+            nombre: lang==="en"?"Connection":"Conexión",
             avatar: "?",
             color: "#2A9D8F",
             email: "",
@@ -4079,53 +4169,77 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       }
     }).catch(e=>{
       console.error("Error cargando conexiones:", e);
-      toast_("No pudimos cargar tus conexiones. Probá recargar la app.","#E63946");
+      toast_(lang==="en"?"We couldn't load your connections. Try reloading the app.":"No pudimos cargar tus conexiones. Probá recargar la app.","#E63946");
     });
   },[authData]);
 
-  // Verificar suscripción activa y retorno de pago.
   // IMPORTANTE: la activación real de la suscripción la hace el backend
-  // (Supabase Edge Function) al recibir y verificar el webhook de Stripe/MercadoPago,
-  // NUNCA el cliente. Acá solo mostramos el estado y, si venimos de un checkout,
-  // esperamos (polling) a que el webhook la confirme — no la escribimos nosotros.
+  // (Supabase Edge Function) al recibir y verificar el webhook de Stripe,
+  // NUNCA el cliente. Acá solo preguntamos "¿ya está?" (polling) hasta que sí.
+  const montadoRef = useRef(true);
+  useEffect(()=>()=>{ montadoRef.current = false; },[]);
+
+  const cargarSub = async () => {
+    if(!authData?.token || !authData?.user?.id) return null;
+    try {
+      const sub = await supa.getSubscription(authData.token, authData.user.id);
+      if(sub && montadoRef.current) setSuscripcion(sub);
+      return sub;
+    } catch(e) { return null; }
+  };
+  const subActiva = sub => !!sub && sub.estado==="activa"
+    && (!sub.vencimiento || new Date(sub.vencimiento) > new Date());
+
+  // Sondea Supabase hasta ver la suscripción activa (o hasta agotar los
+  // intentos). Si viene de una ventana de checkout (popup), la cierra sola
+  // apenas confirma el pago — así el usuario nunca deja de ver la app.
+  const pollHastaActivar = (maxIntentos, intervaloMs, popup) => {
+    setVerificandoPago(true);
+    let intentos = 0, intentosTrasCierre = 0;
+    const poll = async () => {
+      if(!montadoRef.current) return;
+      const sub = await cargarSub();
+      if(subActiva(sub)) {
+        setVerificandoPago(false);
+        toast_(lang==="en"?"Subscription activated! ✓":"¡Suscripción activada! ✓");
+        if(popup && !popup.closed) popup.close();
+        return;
+      }
+      if(popup && popup.closed) {
+        intentosTrasCierre++;
+        if(intentosTrasCierre>=4) { setVerificandoPago(false); return; } // cerró la ventana y no confirmó: dejamos de insistir
+      }
+      intentos++;
+      if(intentos>=maxIntentos) {
+        setVerificandoPago(false);
+        toast_(lang==="en"?"Your payment is being processed. It may take a few minutes to reflect.":"Tu pago está siendo procesado. Puede tardar unos minutos en reflejarse.","#F4A261");
+        return;
+      }
+      setTimeout(poll, (popup && popup.closed) ? 1500 : intervaloMs);
+    };
+    poll();
+  };
+
+  // Abre el checkout de Stripe en una ventana/pestaña secundaria: la app
+  // principal nunca se abandona y confirma sola cuando el webhook activa el
+  // plan. Si el navegador bloquea el popup, cae a navegación de página completa.
+  const iniciarCheckoutStripe = (url) => {
+    const popup = window.open(url, "_blank");
+    if(!popup) { window.location.href = url; return; }
+    pollHastaActivar(100, 3000, popup); // ~5 min de margen: el usuario puede tardar en pagar
+  };
+
   useEffect(()=>{
     if(!authData?.token || !authData?.user?.id) return;
-    let cancelado = false;
-
-    const cargarSub = async () => {
-      try {
-        const sub = await supa.getSubscription(authData.token, authData.user.id);
-        if(sub && !cancelado) setSuscripcion(sub);
-        return sub;
-      } catch(e) { return null; }
-    };
-
     const params = new URLSearchParams(window.location.search);
     if(params.get("sub")==="ok") {
-      // Venimos de un checkout: limpiar la URL y esperar la confirmación real del webhook.
+      // Fallback: si volvemos con ?sub=ok en la URL (p.ej. porque configuraron
+      // "after_completion" en el Payment Link de Stripe para redirigir acá).
       window.history.replaceState(null,"",window.location.pathname);
-      setVerificandoPago(true);
-      let intentos = 0;
-      const poll = async () => {
-        if(cancelado) return;
-        const sub = await cargarSub();
-        intentos++;
-        if(sub && sub.estado==="activa") {
-          setVerificandoPago(false);
-          toast_("¡Suscripción activada! ✓");
-        } else if(intentos>=15) {
-          setVerificandoPago(false);
-          toast_("Tu pago está siendo procesado. Puede tardar unos minutos en reflejarse.","#F4A261");
-        } else {
-          setTimeout(poll, 2000);
-        }
-      };
-      poll();
+      pollHastaActivar(15, 2000, null);
     } else {
       cargarSub();
     }
-
-    return ()=>{ cancelado = true; };
   },[authData]);
 
   const empNombre = userData.empresa||userData.nombre||"";
@@ -4186,10 +4300,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       setDbProfiles(prev=>prev.map(p=>String(p.id)===String(personaId)?{...p,rating:nuevoPromedio}:p));
       setMatches(prev=>prev.map(m=>String(m.id)===String(personaId)?{...m,rating:nuevoPromedio}:m));
       setPerfilViendo(prev=>prev&&String(prev.id)===String(personaId)?{...prev,rating:nuevoPromedio}:prev);
-      toast_("Valoración guardada ✓");
+      toast_(lang==="en"?"Rating saved ✓":"Valoración guardada ✓");
     } catch(e) {
       console.error("Error guardando valoración:", e);
-      toast_("No se pudo guardar la valoración","#E63946");
+      toast_(lang==="en"?"Couldn't save the rating":"No se pudo guardar la valoración","#E63946");
     }
   };
   const swipe = dir => {
@@ -4211,7 +4325,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           supa.recordMatch(authData.token, authData.user.id, cur.id)
             .catch(e=>console.error("Error guardando match en Supabase:", e));
         }
-      } else toast_("Interés enviado!");
+      } else toast_(lang==="en"?"Interest sent!":"Interés enviado!");
     }
     setIdx(i=>i+1);
   };
@@ -4221,7 +4335,9 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     ? (userData.nombre[0]+((userData.apellido||" ")[0])).toUpperCase()
     : (userData.empresa||"??").slice(0,2).toUpperCase();
   const DC = {disponible:"#2A9D8F",obra:"#F4A261",parcial:"#F4A261",no:"#E63946"};
-  const DL = {disponible:"Disponible",obra:"En obra",parcial:"Parcial",no:"No disponible"};
+  const DL = lang==="en"
+    ? {disponible:"Available",obra:"On a project",parcial:"Partial",no:"Not available"}
+    : {disponible:"Disponible",obra:"En obra",parcial:"Parcial",no:"No disponible"};
 
   const TABS_PRO = [
     {id:"swipe",l:t("tab_swipe"),e:"🔍"},
@@ -4330,7 +4446,9 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                 <div>
                   <div style={{fontSize:12,color:"#888",lineHeight:1.4}}>
-                    ❌ Descartado · Esta conexión desaparecerá en <strong>3 días</strong>
+                    {lang==="en"
+                      ?<>❌ Discarded · This connection will disappear in <strong>3 days</strong></>
+                      :<>❌ Descartado · Esta conexión desaparecerá en <strong>3 días</strong></>}
                   </div>
                 </div>
                 <button
@@ -4338,14 +4456,14 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                   style={{background:"none",border:"1px solid #ccc",borderRadius:8,
                     padding:"5px 10px",fontSize:11,color:"#666",cursor:"pointer",
                     fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0}}>
-                  Reactivar
+                  {lang==="en"?"Reactivate":"Reactivar"}
                 </button>
               </div>
             )}
             {/* Selector de estado del postulante */}
             <div style={{marginBottom:10}}>
               <div style={{fontSize:11,color:"#aaa",fontWeight:600,marginBottom:6,textTransform:"uppercase",letterSpacing:.4}}>
-                Estado
+                {lang==="en"?"Status":"Estado"}
               </div>
               <SelectorEstado
                 estado={estadosPost[c.id]||"pendiente"}
@@ -4356,16 +4474,16 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               <button onClick={()=>setPerfilViendo(c)}
                 style={{flex:1,padding:"10px",borderRadius:12,background:"#f0f0f8",color:"#1a1a2e",
                   border:"none",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-                Ver perfil
+                {lang==="en"?"View profile":"Ver perfil"}
               </button>
               <button onClick={()=>setChatWith(c)}
                 style={{flex:2,padding:"10px",borderRadius:12,background:"#1a1a2e",color:"#fff",
                   border:"none",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-                Chatear
+                {lang==="en"?"Chat":"Chatear"}
               </button>
               {!esEmpresa&&(
                 <button onClick={()=>setPerfilViendo(c)}
-                  title="Valorar"
+                  title={lang==="en"?"Rate":"Valorar"}
                   style={{padding:"10px 12px",borderRadius:12,background:"#fff3e0",
                     color:"#F4A261",border:"1.5px solid #F4A261",fontSize:15,
                     cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
@@ -4375,9 +4493,9 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               <button
                 onClick={function(){
                   setEstadosPost(function(p){return {...p,[c.id]:"descartado"};});
-                  toast_("Descartado · desaparecerá en 3 días","#888");
+                  toast_(lang==="en"?"Discarded · will disappear in 3 days":"Descartado · desaparecerá en 3 días","#888");
                 }}
-                title="Descartar postulante"
+                title={lang==="en"?"Discard applicant":"Descartar postulante"}
                 style={{padding:"10px 12px",borderRadius:12,background:"#fdecea",
                   color:"#E63946",border:"1.5px solid #fca5a5",fontSize:15,
                   cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
@@ -4396,7 +4514,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       minHeight:"100vh",display:"flex",flexDirection:"column",maxWidth:420,margin:"0 auto",position:"relative"}}>
       <style>{CSS}</style>
       {showTour&&<TourContextual rol={userRol} tabActual={tab} setTab={setTab} onFin={()=>{setShowTour(false);try{localStorage.setItem("safy_tour_done","1");}catch(e){}}}/>}
-      {showSub&&<PantallaSubscripcion rol={userRol} onClose={()=>setShowSub(false)} authData={authData} onSubscribed={sub=>setSuscripcion(sub)}/>}
+      {showSub&&<PantallaSubscripcion rol={userRol} onClose={()=>setShowSub(false)} authData={authData} onIniciarCheckout={iniciarCheckoutStripe}/>}
       {editando&&<EditarCuenta userData={userData} userRol={userRol}
         onSave={async d=>{
           setUserData(d);
@@ -4594,7 +4712,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                   </button>
                 </div>
                 <div style={{textAlign:"center",color:"#bbb",fontSize:12}}>
-                  Deslizá o usá los botones
+                  {lang==="en"?"Swipe or use the buttons":"Deslizá o usá los botones"}
                 </div>
               </>
             )}
@@ -4622,17 +4740,17 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
             {esEmpresa?(
               <>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-                <div style={{fontSize:13,color:"#888"}}>Tus búsquedas activas</div>
+                <div style={{fontSize:13,color:"#888"}}>{lang==="en"?"Your active listings":"Tus búsquedas activas"}</div>
                 {!verificado&&(
                   <div style={{fontSize:11,color:misObrasEmpresa.filter(function(o){return o.estado!=="pausada";}).length>=3?"#E63946":"#aaa",fontWeight:misObrasEmpresa.filter(function(o){return o.estado!=="pausada";}).length>=3?700:400}}>
-                    {misObrasEmpresa.filter(function(o){return o.estado!=="pausada";}).length}/3 gratuitas
+                    {misObrasEmpresa.filter(function(o){return o.estado!=="pausada";}).length}/3 {lang==="en"?"free":"gratuitas"}
                   </div>
                 )}
               </div>
                 {misObrasEmpresa.length===0?(
                   <div style={{textAlign:"center",padding:"50px 20px",color:"#999"}}>
                     <div style={{fontSize:48,marginBottom:12}}>📋</div>
-                    <div style={{fontWeight:700,fontSize:16}}>Sin búsquedas publicadas</div>
+                    <div style={{fontWeight:700,fontSize:16}}>{lang==="en"?"No listings published":"Sin búsquedas publicadas"}</div>
                   </div>
                 ):(
                   misObrasEmpresa.map(o=>(
@@ -4646,10 +4764,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                             <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e"}}>{o.empresa}</div>
                             <div style={{color:"#888",fontSize:12}}>{o.tipo} · {o.ciudad}</div>
                           </div>
-                          {o.urgente&&<Chip selected color="#E63946">URGENTE</Chip>}
+                          {o.urgente&&<Chip selected color="#E63946">{lang==="en"?"URGENT":"URGENTE"}</Chip>}
                           <button
                             onClick={function(){setEditBusq({busqueda:o,idx:null});}}
-                            title="Editar aviso"
+                            title={lang==="en"?"Edit listing":"Editar aviso"}
                             style={{background:"#f0f0f8",border:"none",borderRadius:8,
                               padding:"6px 8px",fontSize:15,cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}>
                             ⚙️
@@ -4662,16 +4780,16 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                           <div style={{background:"#fdecea",borderRadius:10,padding:"10px 12px",
                             marginBottom:10,border:"1px solid #fca5a5"}}>
                             <div style={{fontSize:12,fontWeight:700,color:"#E63946",marginBottom:4}}>
-                              Aviso pausado — limite gratuito alcanzado
+                              {lang==="en"?"Listing paused — free limit reached":"Aviso pausado — limite gratuito alcanzado"}
                             </div>
                             <div style={{fontSize:11,color:"#666",lineHeight:1.4,marginBottom:8}}>
-                              Verifica tu empresa para activarlo y publicar sin limites.
+                              {lang==="en"?"Go Pro to activate it and publish without limits.":"Pasate a Pro para activarlo y publicar sin limites."}
                             </div>
-                            <button onClick={function(){setShowSusc(true);}}
+                            <button onClick={function(){setShowSub(true);}}
                               style={{width:"100%",padding:"7px 0",borderRadius:8,border:"none",
                                 background:"#1D9BF0",color:"#fff",fontWeight:700,fontSize:12,
                                 cursor:"pointer",fontFamily:"inherit"}}>
-                              Verificar empresa · U$D 9.99/mes
+                              {lang==="en"?"Discover Safy Pro":"Descubrí Safy Pro"}
                             </button>
                           </div>
                         )}
@@ -4684,7 +4802,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                             style={{background:"#1a1a2e",color:"#fff",border:"none",borderRadius:99,
                               padding:"8px 16px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",
                               display:"flex",alignItems:"center",gap:6}}>
-                            Ver postulantes
+                            {lang==="en"?"View applicants":"Ver postulantes"}
                             <span style={{background:"#F4A261",color:"#1a1a2e",borderRadius:99,
                               fontSize:11,padding:"1px 7px",fontWeight:800}}>
                               {CANDS.length}
@@ -4700,12 +4818,14 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               <>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
                   <div style={{fontSize:13,color:"#888"}}>
-                    {misBusquedas.length} búsqueda{misBusquedas.length!==1?"s":""} publicada{misBusquedas.length!==1?"s":""}
+                    {lang==="en"
+                      ?misBusquedas.length+" search"+(misBusquedas.length!==1?"es":"")+" published"
+                      :misBusquedas.length+" búsqueda"+(misBusquedas.length!==1?"s":"")+" publicada"+(misBusquedas.length!==1?"s":"")}
                   </div>
                   <button onClick={()=>setShowNueva(true)}
                     style={{background:"#1a1a2e",color:"#fff",border:"none",borderRadius:99,
                       padding:"8px 14px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                    + Nueva búsqueda
+                    {lang==="en"?"+ New search":"+ Nueva búsqueda"}
                   </button>
                 </div>
                 {misBusquedas.length===0?(
@@ -4713,15 +4833,15 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                     boxShadow:"0 2px 10px rgba(0,0,0,0.07)",border:"1.5px dashed #e0e0ef"}}>
                     <div style={{fontSize:44,marginBottom:12}}>📋</div>
                     <div style={{fontWeight:700,fontSize:15,color:"#1a1a2e",marginBottom:6}}>
-                      Publicá tu primera búsqueda
+                      {lang==="en"?"Post your first search":"Publicá tu primera búsqueda"}
                     </div>
                     <div style={{fontSize:13,color:"#888",lineHeight:1.5,marginBottom:16}}>
-                      Necesitás un colega para una obra puntual? Conectate con otros profesionales de SyH y MA.
+                      {lang==="en"?"Need a colleague for a one-off project? Connect with other HSE professionals.":"Necesitás un colega para una obra puntual? Conectate con otros profesionales de SyH y MA."}
                     </div>
                     <button onClick={()=>setShowNueva(true)}
                       style={{background:"#1a1a2e",color:"#fff",border:"none",borderRadius:99,
                         padding:"12px 24px",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>
-                      Crear búsqueda
+                      {lang==="en"?"Create search":"Crear búsqueda"}
                     </button>
                   </div>
                 ):(
@@ -4742,10 +4862,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                             background:b.estado==="pausada"?"#f0f0f0":b.estado==="cubierta"?"#fff3e0":"#e8f7f5",
                             color:b.estado==="pausada"?"#888":b.estado==="cubierta"?"#c97e1a":"#2A9D8F",
                             fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:99,flexShrink:0}}>
-                            {b.estado==="pausada"?"Pausada":b.estado==="cubierta"?"Cubierta":"Activa"}
+                            {b.estado==="pausada"?(lang==="en"?"Paused":"Pausada"):b.estado==="cubierta"?(lang==="en"?"Covered":"Cubierta"):(lang==="en"?"Active":"Activa")}
                           </span>
                           <button onClick={()=>setEditBusq({busqueda:b,idx:i})}
-                            title="Editar"
+                            title={lang==="en"?"Edit":"Editar"}
                             style={{background:"#f0f0f8",border:"none",borderRadius:8,
                               padding:"5px 7px",fontSize:14,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
                             ⚙️
@@ -4765,7 +4885,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                               background:"#1a1a2e",color:"#fff",fontSize:12,fontWeight:700,
                               cursor:"pointer",fontFamily:"inherit",
                               display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                            Ver postulantes
+                            {lang==="en"?"View applicants":"Ver postulantes"}
                             <span style={{background:"#F4A261",color:"#1a1a2e",borderRadius:99,
                               fontSize:10,padding:"1px 6px",fontWeight:800}}>
                               {CANDS.length}
@@ -4798,11 +4918,11 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           return listaConexiones.length===0?(
             <div style={{textAlign:"center",padding:"60px 20px",color:"#999"}}>
               <div style={{fontSize:48,marginBottom:12}}>🤝</div>
-              <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>Sin conexiones aún</div>
+              <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>{lang==="en"?"No connections yet":"Sin conexiones aún"}</div>
               <div style={{fontSize:13,lineHeight:1.5}}>
                 {esEmpresa
-                  ? "Cuando revises un perfil, lo marques como Visto o En proceso, aparecerá aquí."
-                  : "Deslizá perfiles para conectar"}
+                  ? (lang==="en"?"When you review a profile and mark it Seen or In progress, it'll show up here.":"Cuando revises un perfil, lo marques como Visto o En proceso, aparecerá aquí.")
+                  : (lang==="en"?"Swipe profiles to connect":"Deslizá perfiles para conectar")}
               </div>
             </div>
           ):(
@@ -4867,12 +4987,12 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                     <button onClick={function(){setPerfilViendo(m);}}
                       style={{flex:1,padding:"10px 0",borderRadius:12,background:"#f0f0f8",
                         color:"#1a1a2e",border:"none",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-                      Ver perfil
+                      {lang==="en"?"View profile":"Ver perfil"}
                     </button>
                     <button onClick={function(){setChatWith(m);}}
                       style={{flex:1,padding:"10px 0",borderRadius:12,background:"#1a1a2e",
                         color:"#fff",border:"none",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-                      Chatear
+                      {lang==="en"?"Chat":"Chatear"}
                     </button>
                     {confirmElim===i?(
                       <div style={{display:"flex",gap:6}}>
@@ -4884,18 +5004,21 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                             try { await supa.deleteMatch(authData.token, authData.user.id, m.id); }
                             catch(e) { borradoOk = false; console.error("Error eliminando conexión:", e); }
                           }
-                          toast_(borradoOk ? "Conexión eliminada" : "Se quitó de la lista, pero puede reaparecer — hubo un error de conexión", borradoOk ? undefined : "#F4A261");
+                          toast_(borradoOk
+                            ? (lang==="en"?"Connection deleted":"Conexión eliminada")
+                            : (lang==="en"?"Removed from the list, but it may reappear — there was a connection error":"Se quitó de la lista, pero puede reaparecer — hubo un error de conexión"),
+                            borradoOk ? undefined : "#F4A261");
                         }}
                           style={{padding:"7px 10px",borderRadius:10,border:"none",
                             background:"#E63946",color:"#fff",fontWeight:700,fontSize:11,
                             cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                          Sí, eliminar
+                          {lang==="en"?"Yes, delete":"Sí, eliminar"}
                         </button>
                         <button onClick={function(){setConfirmElim(null);}}
                           style={{padding:"7px 10px",borderRadius:10,border:"1.5px solid #e0e0ef",
                             background:"#fff",color:"#888",fontWeight:600,fontSize:11,
                             cursor:"pointer",fontFamily:"inherit"}}>
-                          No
+                          {lang==="en"?"No":"No"}
                         </button>
                       </div>
                     ):(
@@ -4903,7 +5026,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                         style={{padding:"10px 11px",borderRadius:12,background:"#fdecea",
                           color:"#E63946",border:"1.5px solid #fca5a5",fontSize:15,
                           cursor:"pointer",fontFamily:"inherit"}}
-                        title="Eliminar conexión">
+                        title={lang==="en"?"Delete connection":"Eliminar conexión"}>
                         🗑
                       </button>
                     )}
@@ -4926,25 +5049,25 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                   <div style={{fontWeight:800,fontSize:18,color:"#1a1a2e",
                     display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                     {esEmpresa
-                      ? (userData.empresa||userData.nombre||"Mi Empresa")
-                      : (userData.nombre?(userData.nombre+" "+(userData.apellido||"")).trim():"Profesional")}
+                      ? (userData.empresa||userData.nombre||(lang==="en"?"My Company":"Mi Empresa"))
+                      : (userData.nombre?(userData.nombre+" "+(userData.apellido||"")).trim():(lang==="en"?"Professional":"Profesional"))}
                     {verificado&&<BadgeVerificado size={18}/>}
                     {esPro&&<span style={{fontSize:11,fontWeight:800,background:"linear-gradient(135deg,#F4A261,#e8853d)",color:"#1a1a2e",padding:"2px 8px",borderRadius:99}}>⭐ PRO</span>}
                   </div>
                   {/* Título */}
                   {!esEmpresa&&(userData.titulo||userData.tituloSyH)&&(
                     <div style={{color:"#1a1a2e",fontSize:14,fontWeight:600,marginTop:2}}>
-                      {TITULOS[userData.titulo||userData.tituloSyH]||"Profesional"}
+                      {TITULOS[userData.titulo||userData.tituloSyH]||(lang==="en"?"Professional":"Profesional")}
                     </div>
                   )}
                   {esEmpresa&&userData.contacto&&(
-                    <div style={{fontSize:13,color:"#666",marginTop:2}}>Contacto: {userData.contacto}</div>
+                    <div style={{fontSize:13,color:"#666",marginTop:2}}>{lang==="en"?"Contact":"Contacto"}: {userData.contacto}</div>
                   )}
                   {esEmpresa&&(
-                    <div style={{color:"#666",fontSize:13,marginTop:2}}>{userData.rubro||"Empresa"}</div>
+                    <div style={{color:"#666",fontSize:13,marginTop:2}}>{userData.rubro||(lang==="en"?"Company":"Empresa")}</div>
                   )}
                   <div style={{fontSize:13,color:"#888",marginTop:2}}>
-                    {[userData.ciudad,userData.provincia].filter(Boolean).join(", ")||"Sin ubicación"}
+                    {[userData.ciudad,userData.provincia].filter(Boolean).join(", ")||(lang==="en"?"No location":"Sin ubicación")}
                   </div>
                   {/* Disponibilidad */}
                   {!esEmpresa&&(
@@ -4953,21 +5076,21 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                         <span style={{background:(DC[userData.disponibilidad]||"#999")+"22",
                           color:DC[userData.disponibilidad]||"#999",
                           padding:"3px 10px",borderRadius:99,fontSize:12,fontWeight:700}}>
-                          {DL[userData.disponibilidad]||"Disponible"}
+                          {DL[userData.disponibilidad]||(lang==="en"?"Available":"Disponible")}
                         </span>
                       )}
                       {!userData.disponibilidad&&userData.disponible!==undefined&&(
                         <span style={{background:userData.disponible?"#e8f7f5":"#fdecea",
                           color:userData.disponible?"#2A9D8F":"#E63946",
                           padding:"3px 10px",borderRadius:99,fontSize:12,fontWeight:700}}>
-                          {userData.disponible?"Disponible":"No disponible"}
+                          {userData.disponible?(lang==="en"?"Available":"Disponible"):(lang==="en"?"Not available":"No disponible")}
                         </span>
                       )}
                       {userData.seguro!==undefined&&userData.seguro!==null&&(
                         <span style={{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:99,
                           background:userData.seguro?"#e8f7f5":"#fdecea",
                           color:userData.seguro?"#2A9D8F":"#E63946"}}>
-                          {userData.seguro?"✓ Con seguro":"✕ Sin seguro"}
+                          {userData.seguro?(lang==="en"?"✓ Insured":"✓ Con seguro"):(lang==="en"?"✕ Not insured":"✕ Sin seguro")}
                         </span>
                       )}
                     </div>
@@ -5006,7 +5129,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               {!esEmpresa&&userData.radio&&(
                 <div style={{marginBottom:14,display:"flex",alignItems:"center",gap:8}}>
                   <span style={{fontSize:14}}>📍</span>
-                  <span style={{fontSize:13,color:"#555"}}>Radio de trabajo: <strong>{userData.radio} km</strong></span>
+                  <span style={{fontSize:13,color:"#555"}}>{lang==="en"?"Work radius":"Radio de trabajo"}: <strong>{userData.radio} km</strong></span>
                 </div>
               )}
 
@@ -5015,18 +5138,18 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 {!esEmpresa&&(
                   <div>
-                    <div style={{fontSize:11,color:"#999",fontWeight:600}}>TARIFA / HORA</div>
+                    <div style={{fontSize:11,color:"#999",fontWeight:600}}>{lang==="en"?"RATE / HOUR":"TARIFA / HORA"}</div>
                     <div style={{fontSize:22,fontWeight:800,color:"#1a1a2e"}}>
                       {userData.tarifa||userData.presupuesto
                         ?(sym+Number(userData.tarifa||userData.presupuesto).toLocaleString()+"/h")
-                        :"No indicado"}
+                        :(lang==="en"?"Not specified":"No indicado")}
                     </div>
                     <div style={{fontSize:11,color:"#888",marginTop:2}}>{userData.moneda||"ARS"}</div>
                   </div>
                 )}
                 <div style={{textAlign:esEmpresa?"left":"right"}}>
                   <div style={{fontSize:11,color:"#999",fontWeight:600}}>
-                    {esEmpresa?"BÚSQUEDAS ACTIVAS":"CONEXIONES"}
+                    {esEmpresa?(lang==="en"?"ACTIVE LISTINGS":"BÚSQUEDAS ACTIVAS"):(lang==="en"?"CONNECTIONS":"CONEXIONES")}
                   </div>
                   <div style={{fontSize:22,fontWeight:800,color:"#1a1a2e"}}>
                     {esEmpresa
@@ -5039,7 +5162,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
             {(userData.email||userData.tel)&&(
               <div style={{background:"#fff",borderRadius:16,padding:18,
                 boxShadow:"0 2px 12px rgba(0,0,0,0.08)",marginBottom:14}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:10}}>Contacto</div>
+                <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:10}}>{lang==="en"?"Contact":"Contacto"}</div>
                 {userData.email&&<div style={{fontSize:13,color:"#1a73e8",marginBottom:6,fontWeight:600}}>{userData.email}</div>}
                 {userData.tel&&<div style={{fontSize:13,color:"#1a1a2e",fontWeight:600}}>{userData.tel}</div>}
               </div>
@@ -5047,7 +5170,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
             {(userData.obras||[]).length>0&&(
               <div style={{background:"#fff",borderRadius:16,padding:20,
                 boxShadow:"0 2px 12px rgba(0,0,0,0.08)",marginBottom:14}}>
-                <div style={{fontSize:14,fontWeight:700,color:"#1a1a2e",marginBottom:12}}>Obras</div>
+                <div style={{fontSize:14,fontWeight:700,color:"#1a1a2e",marginBottom:12}}>{lang==="en"?"Projects":"Obras"}</div>
                 {userData.obras.map((o,i)=>(
                   <div key={i} style={{padding:"8px 0",
                     borderBottom:i<userData.obras.length-1?"1px solid #f0f0f0":"none",
@@ -5060,24 +5183,24 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
             {/* Compartir perfil */}
             <div style={{background:"#fff",borderRadius:16,padding:16,
               boxShadow:"0 2px 10px rgba(0,0,0,0.07)",marginBottom:12}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:12}}>Compartir mi perfil</div>
+              <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:12}}>{lang==="en"?"Share my profile":"Compartir mi perfil"}</div>
               <div style={{display:"flex",gap:8}}>
                 <button
                   onClick={()=>{
                     const name = (userData.nombre||userData.empresa||"").replace(/\s/g,"-").toLowerCase();
                     const link = "https://safyjobs.com/perfil/"+name;
-                    if(navigator.clipboard) navigator.clipboard.writeText(link).then(()=>toast_("Link copiado"));
+                    if(navigator.clipboard) navigator.clipboard.writeText(link).then(()=>toast_(lang==="en"?"Link copied":"Link copiado"));
                   }}
                   style={{flex:1,padding:"10px 0",borderRadius:12,border:"1.5px solid #e0e0ef",
                     background:"#fff",fontSize:12,fontWeight:700,color:"#1a1a2e",cursor:"pointer",
                     fontFamily:"inherit"}}>
-                  🔗 Copiar link
+                  🔗 {lang==="en"?"Copy link":"Copiar link"}
                 </button>
                 <button
                   onClick={()=>{
                     const name = (userData.nombre||userData.empresa||"").replace(/\s/g,"-").toLowerCase();
                     const link = "https://safyjobs.com/perfil/"+name;
-                    const texto = encodeURIComponent("Mi perfil profesional en Safy: "+link);
+                    const texto = encodeURIComponent((lang==="en"?"My professional profile on Safy: ":"Mi perfil profesional en Safy: ")+link);
                     window.open("https://wa.me/?text="+texto,"_blank");
                   }}
                   style={{flex:1,padding:"10px 0",borderRadius:12,border:"none",background:"#25D366",
@@ -5173,6 +5296,14 @@ const MOTIVOS_REPORTE = [
   "Acoso o hostigamiento",
   "Otro",
 ];
+const MOTIVOS_REPORTE_EN = [
+  "Fake or misleading profile",
+  "Inappropriate conduct",
+  "Spam or unsolicited advertising",
+  "Incorrect contact information",
+  "Harassment",
+  "Other",
+];
 
 const RESEND_KEY = "re_QXyqybgJ_s6pw8gPxbxkoiGmd4em1d7a7";
 const REPORT_EMAIL = "derosegustavo27@gmail.com";
@@ -5219,6 +5350,8 @@ const sendReporte = async ({persona, motivo, detalle, reportadoPor}) => {
 };
 
 const ModalReporte = ({persona, onReportar, onBloquear, onClose, userData}) => {
+  const {lang} = useLang();
+  const motivos = lang==="en" ? MOTIVOS_REPORTE_EN : MOTIVOS_REPORTE;
   const [motivo, setMotivo] = useState("");
   const [detalle, setDetalle] = useState("");
   const [paso, setPaso] = useState("menu"); // menu | reporte | confirmado
@@ -5228,15 +5361,15 @@ const ModalReporte = ({persona, onReportar, onBloquear, onClose, userData}) => {
       display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
       <div style={{background:"#fff",borderRadius:20,padding:28,maxWidth:320,width:"100%",textAlign:"center"}}>
         <div style={{fontSize:48,marginBottom:12}}>✅</div>
-        <div style={{fontWeight:800,fontSize:18,color:"#1a1a2e",marginBottom:8}}>Reporte enviado</div>
+        <div style={{fontWeight:800,fontSize:18,color:"#1a1a2e",marginBottom:8}}>{lang==="en"?"Report sent":"Reporte enviado"}</div>
         <div style={{fontSize:13,color:"#888",lineHeight:1.5,marginBottom:20}}>
-          Nuestro equipo revisará el caso. Gracias por ayudarnos a mantener Safy seguro.
+          {lang==="en"?"Our team will review the case. Thanks for helping keep Safy safe.":"Nuestro equipo revisará el caso. Gracias por ayudarnos a mantener Safy seguro."}
         </div>
         <button onClick={onClose}
           style={{width:"100%",padding:13,borderRadius:12,border:"none",
             background:"#1a1a2e",color:"#fff",fontWeight:700,fontSize:14,
             cursor:"pointer",fontFamily:"inherit"}}>
-          Cerrar
+          {lang==="en"?"Close":"Cerrar"}
         </button>
       </div>
     </div>
@@ -5248,10 +5381,10 @@ const ModalReporte = ({persona, onReportar, onBloquear, onClose, userData}) => {
       <div style={{background:"#fff",borderRadius:"20px 20px 0 0",padding:"24px 20px 36px",
         width:"100%",maxWidth:420,maxHeight:"85vh",overflowY:"auto"}}>
         <div style={{fontWeight:800,fontSize:17,color:"#1a1a2e",marginBottom:4}}>
-          Reportar a {persona.nombre||persona.empresa}
+          {lang==="en"?"Report ":"Reportar a "}{persona.nombre||persona.empresa}
         </div>
-        <div style={{fontSize:13,color:"#888",marginBottom:16}}>Seleccioná el motivo</div>
-        {MOTIVOS_REPORTE.map(m=>(
+        <div style={{fontSize:13,color:"#888",marginBottom:16}}>{lang==="en"?"Select a reason":"Seleccioná el motivo"}</div>
+        {motivos.map(m=>(
           <button key={m} onClick={()=>setMotivo(m)}
             style={{width:"100%",padding:"11px 14px",borderRadius:10,marginBottom:8,
               border:motivo===m?"2px solid #E63946":"1.5px solid #e0e0ef",
@@ -5265,10 +5398,10 @@ const ModalReporte = ({persona, onReportar, onBloquear, onClose, userData}) => {
         {motivo&&(
           <div style={{marginBottom:16}}>
             <label style={{fontSize:12,fontWeight:700,color:"#888",display:"block",marginBottom:6}}>
-              Detalle adicional (opcional)
+              {lang==="en"?"Additional details (optional)":"Detalle adicional (opcional)"}
             </label>
             <textarea value={detalle} onChange={e=>setDetalle(e.target.value)}
-              placeholder="Contanos más sobre lo que pasó..."
+              placeholder={lang==="en"?"Tell us more about what happened...":"Contanos más sobre lo que pasó..."}
               style={{width:"100%",height:80,borderRadius:10,border:"1.5px solid #e0e0ef",
                 padding:"10px 12px",fontSize:13,fontFamily:"inherit",resize:"none",
                 boxSizing:"border-box"}}/>
@@ -5279,7 +5412,7 @@ const ModalReporte = ({persona, onReportar, onBloquear, onClose, userData}) => {
             style={{flex:1,padding:12,borderRadius:12,border:"1.5px solid #e0e0ef",
               background:"#fff",color:"#666",fontWeight:700,fontSize:13,
               cursor:"pointer",fontFamily:"inherit"}}>
-            Cancelar
+            {lang==="en"?"Cancel":"Cancelar"}
           </button>
           <button onClick={()=>{
               onReportar({persona,motivo,detalle,fecha:new Date().toISOString()});
@@ -5290,7 +5423,7 @@ const ModalReporte = ({persona, onReportar, onBloquear, onClose, userData}) => {
             style={{flex:2,padding:12,borderRadius:12,border:"none",
               background:motivo?"#E63946":"#ccc",color:"#fff",fontWeight:700,fontSize:13,
               cursor:motivo?"pointer":"not-allowed",fontFamily:"inherit"}}>
-            Enviar reporte
+            {lang==="en"?"Send report":"Enviar reporte"}
           </button>
         </div>
       </div>
@@ -5305,26 +5438,26 @@ const ModalReporte = ({persona, onReportar, onBloquear, onClose, userData}) => {
         <div style={{fontWeight:800,fontSize:17,color:"#1a1a2e",marginBottom:4}}>
           {persona.nombre||persona.empresa}
         </div>
-        <div style={{fontSize:13,color:"#888",marginBottom:20}}>¿Qué querés hacer?</div>
+        <div style={{fontSize:13,color:"#888",marginBottom:20}}>{lang==="en"?"What do you want to do?":"¿Qué querés hacer?"}</div>
         <button onClick={()=>setPaso("reporte")}
           style={{width:"100%",padding:14,borderRadius:12,border:"1.5px solid #fdecea",
             background:"#fdecea",color:"#E63946",fontWeight:700,fontSize:14,
             cursor:"pointer",fontFamily:"inherit",marginBottom:10,textAlign:"left",
             display:"flex",alignItems:"center",gap:10}}>
-          🚩 Reportar a este usuario
+          🚩 {lang==="en"?"Report this user":"Reportar a este usuario"}
         </button>
         <button onClick={()=>{onBloquear(persona);onClose();}}
           style={{width:"100%",padding:14,borderRadius:12,border:"1.5px solid #e0e0ef",
             background:"#f8f8fc",color:"#555",fontWeight:700,fontSize:14,
             cursor:"pointer",fontFamily:"inherit",marginBottom:20,textAlign:"left",
             display:"flex",alignItems:"center",gap:10}}>
-          🚫 Bloquear usuario
+          🚫 {lang==="en"?"Block user":"Bloquear usuario"}
         </button>
         <button onClick={onClose}
           style={{width:"100%",padding:12,borderRadius:12,border:"none",
             background:"transparent",color:"#aaa",fontSize:13,
             cursor:"pointer",fontFamily:"inherit"}}>
-          Cancelar
+          {lang==="en"?"Cancel":"Cancelar"}
         </button>
       </div>
     </div>
@@ -5564,6 +5697,7 @@ export default function Safy() {
   const [adminInput,setAdminInput] = useState("");
   const [adminErr,setAdminErr] = useState(false);
   const [primerLogin,setPrimerLogin] = useState(false);
+  const {lang} = useLang();
 
   const tryAdmin = () => {
     if(adminInput===ADMIN_CODE){ setAdminOpen(true); setAdminInput(""); setAdminErr(false); }
@@ -5682,12 +5816,12 @@ export default function Safy() {
           <summary style={{fontSize:10,color:"rgba(85,102,119,0.4)",cursor:"pointer",listStyle:"none",userSelect:"none"}}>· · ·</summary>
           <div style={{marginTop:8,display:"flex",gap:8,justifyContent:"center",alignItems:"center"}}>
             <input value={adminInput} onChange={e=>setAdminInput(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&tryAdmin()} type="password" placeholder="Código admin"
+              onKeyDown={e=>e.key==="Enter"&&tryAdmin()} type="password" placeholder={lang==="en"?"Admin code":"Código admin"}
               style={{padding:"7px 12px",borderRadius:10,border:adminErr?"1.5px solid #E63946":"1.5px solid rgba(85,102,119,0.3)",fontSize:12,outline:"none",width:130,background:"rgba(26,26,46,0.3)",color:"#fff"}}/>
             <button onClick={tryAdmin}
               style={{padding:"7px 12px",borderRadius:10,background:"#F4A261",color:"#1a1a2e",border:"none",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>OK</button>
           </div>
-          {adminErr&&<div style={{fontSize:11,color:"#E63946",marginTop:4}}>Código incorrecto</div>}
+          {adminErr&&<div style={{fontSize:11,color:"#E63946",marginTop:4}}>{lang==="en"?"Incorrect code":"Código incorrecto"}</div>}
         </details>
       </div>
     </div>
@@ -5762,7 +5896,7 @@ export default function Safy() {
         const empInit = empNombre.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
         const primerAviso = {
           id: Date.now(), empresa: empNombre,
-          tipo: data.sectorObra || data.rubro || "Búsqueda de profesional",
+          tipo: data.sectorObra || data.rubro || (lang==="en"?"Professional search":"Búsqueda de profesional"),
           ciudad: data.zonaObra || data.ciudad || "",
           distancia: Number(data.radio) || 10,
           presupuesto: Number(data.presupuesto) || 0,
@@ -5807,7 +5941,9 @@ export default function Safy() {
         const result = await supa.upsertProfile(authData.token, profileData);
         if(result?.error) {
           console.error("No se pudo guardar el perfil al completar el onboarding:", result.error);
-          alert("Hubo un problema guardando tu perfil. Podés revisarlo y volver a guardarlo desde 'Editar perfil'.");
+          alert(lang==="en"
+            ?"There was a problem saving your profile. You can review it and save it again from 'Edit profile'."
+            :"Hubo un problema guardando tu perfil. Podés revisarlo y volver a guardarlo desde 'Editar perfil'.");
         }
       } else {
         console.error("Sin authData — no se pudo guardar perfil");
