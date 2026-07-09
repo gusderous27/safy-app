@@ -349,7 +349,6 @@ const supa = {
 
   async upsertProfile(token, profile) {
     const {id, ...data} = profile;
-    console.log("upsertProfile — userId:", id, "token:", token?.slice(0,20));
     // Usar PATCH para actualizar el perfil existente (creado por trigger)
     const r = await fetch(SUPA_URL + "/rest/v1/profiles?id=eq." + id, {
       method: "PATCH",
@@ -361,11 +360,8 @@ const supa = {
       },
       body: JSON.stringify(data)
     });
-    const text = await r.text();
-    console.log("upsertProfile PATCH — status:", r.status, "body:", text.slice(0,200));
     if(!r.ok) {
-      // Si el PATCH falla, intentar POST
-      console.log("PATCH falló, intentando POST...");
+      // Si el PATCH falla (perfil todavía no existía), intentar POST
       const r2 = await fetch(SUPA_URL + "/rest/v1/profiles", {
         method: "POST",
         headers: {
@@ -376,9 +372,11 @@ const supa = {
         },
         body: JSON.stringify({id, ...data})
       });
-      const text2 = await r2.text();
-      console.log("POST fallback — status:", r2.status, "body:", text2.slice(0,200));
-      if(!r2.ok) return {error: text2};
+      if(!r2.ok) {
+        const text2 = await r2.text();
+        console.error("upsertProfile — falló PATCH y POST:", text2.slice(0,300));
+        return {error: text2};
+      }
     }
     return {data: true};
   },
@@ -410,7 +408,6 @@ const supa = {
       return [];
     }
     const d = await r.json();
-    console.log("getProfiles — cargados:", Array.isArray(d) ? d.length : 0, "perfiles totales");
     return Array.isArray(d) ? d : [];
   },
 
@@ -427,23 +424,26 @@ const supa = {
       headers: { ...this.headers, "Authorization": "Bearer " + token, "Prefer": "return=representation" },
       body: JSON.stringify(job)
     });
+    if(!r.ok) throw new Error(await r.text());
     return r.json();
   },
 
   async recordSwipe(token, userId, targetId, dir) {
-    await fetch(SUPA_URL + "/rest/v1/swipes", {
+    const r = await fetch(SUPA_URL + "/rest/v1/swipes", {
       method: "POST",
       headers: { ...this.headers, "Authorization": "Bearer " + token },
       body: JSON.stringify({ user_id: userId, target_id: String(targetId), direccion: dir })
     });
+    if(!r.ok) throw new Error(await r.text());
   },
 
   async recordMatch(token, userId, targetId) {
-    await fetch(SUPA_URL + "/rest/v1/matches", {
+    const r = await fetch(SUPA_URL + "/rest/v1/matches", {
       method: "POST",
       headers: { ...this.headers, "Authorization": "Bearer " + token },
       body: JSON.stringify({ user1_id: userId, user2_id: String(targetId) })
     });
+    if(!r.ok) throw new Error(await r.text());
   },
 
   async getProfileById(tokenOrKey, userId) {
@@ -463,10 +463,11 @@ const supa = {
   },
 
   async deleteMatch(token, userId, targetId) {
-    await fetch(SUPA_URL + "/rest/v1/matches?user1_id=eq." + userId + "&user2_id=eq." + targetId, {
+    const r = await fetch(SUPA_URL + "/rest/v1/matches?user1_id=eq." + userId + "&user2_id=eq." + targetId, {
       method: "DELETE",
       headers: { ...this.headers, "Authorization": "Bearer " + token }
     });
+    if(!r.ok) throw new Error(await r.text());
   },
 
   async getMatches(token, userId) {
@@ -502,11 +503,12 @@ const supa = {
   },
 
   async saveMensaje(token, chatId, userId, texto) {
-    await fetch(SUPA_URL + "/rest/v1/mensajes", {
+    const r = await fetch(SUPA_URL + "/rest/v1/mensajes", {
       method: "POST",
       headers: { ...this.headers, "Authorization": "Bearer " + token, "Prefer": "return=minimal" },
       body: JSON.stringify({ chat_id: chatId, user_id: userId, texto, from_role: "me" })
     });
+    if(!r.ok) throw new Error(await r.text());
   },
 
   async getMensajes(token, chatId) {
@@ -2706,7 +2708,10 @@ const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
         try { localStorage.setItem("safy_chat_" + chatId, JSON.stringify(combined)); } catch(e) {}
       }
       setLoadingMsgs(false);
-    }).catch(()=>setLoadingMsgs(false));
+    }).catch(e=>{
+      console.error("Error cargando mensajes del chat:", e);
+      setLoadingMsgs(false);
+    });
   },[chatId]);
 
   const setMsgs = fn => {
@@ -2731,7 +2736,8 @@ const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
     setInput("");
     // Guardar en Supabase
     if(authData?.token && authData?.user?.id) {
-      supa.saveMensaje(authData.token, chatId, authData.user.id, texto).catch(()=>{});
+      supa.saveMensaje(authData.token, chatId, authData.user.id, texto)
+        .catch(e=>console.error("Error guardando mensaje en Supabase:", e));
     }
     // Solo responder automáticamente si NO es un perfil seed
     const esSeed = match?.id && String(match.id).startsWith("00000000-");
@@ -3018,48 +3024,6 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
             Iniciar conversación
           </button>
         )}
-      </div>
-    </div>
-  );
-};
-
-// ─── VALORACIÓN ───────────────────────────────────────────────────────────────
-
-const ModalValoracion = ({match,onSubmit,onClose}) => {
-  const [hover,setHover] = useState(0);
-  const labels = ["","Muy mala","Mala","Regular","Buena","Excelente"];
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(26,26,46,.88)",zIndex:900,
-      display:"flex",alignItems:"flex-end",justifyContent:"center"}}
-      onClick={onClose}>
-      <div style={{background:"#fff",borderRadius:"24px 24px 0 0",padding:"28px 24px 36px",
-        width:"100%",maxWidth:420,animation:"slideUp .25s ease"}}
-        onClick={e=>e.stopPropagation()}>
-        <div style={{textAlign:"center",marginBottom:6}}>
-          <div style={{fontWeight:800,fontSize:18,color:"#1a1a2e",marginBottom:4}}>
-            ¿Cómo fue tu experiencia?
-          </div>
-          <div style={{fontSize:13,color:"#888"}}>
-            {match.empresa||match.nombre}
-          </div>
-        </div>
-        <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:24,marginBottom:12}}>
-          {[1,2,3,4,5].map(n=>(
-            <button key={n}
-              onMouseEnter={()=>setHover(n)}
-              onMouseLeave={()=>setHover(0)}
-              onClick={()=>{ onSubmit({stars:n}); onClose(); }}
-              style={{background:"none",border:"none",fontSize:44,cursor:"pointer",
-                color:hover>=n?"#F4A261":"#e0e0ef",fontFamily:"inherit",
-                transform:hover>=n?"scale(1.2)":"scale(1)",
-                transition:"transform .1s, color .15s",lineHeight:1}}>
-              ★
-            </button>
-          ))}
-        </div>
-        <div style={{textAlign:"center",fontSize:14,fontWeight:700,color:"#F4A261",minHeight:22}}>
-          {labels[hover]||"Tocá para valorar"}
-        </div>
       </div>
     </div>
   );
@@ -4172,8 +4136,6 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   const [userData,setUserData]         = useState(init0);
   const [chatWith,setChatWith]         = useState(null);
   const [perfilViendo,setPerfilViendo] = useState(null);
-  const [valorando,setValorando]       = useState(null);
-  const [valoraciones,setValoraciones] = useState({});
   const [misBusquedas,setMisBusquedas] = useState([]);
   const [showNueva,setShowNueva]       = useState(false);
   const [postViendo,setPostViendo]     = useState(null);
@@ -4261,10 +4223,12 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
             return p.distanciaReal <= radioKm; // reales: filtrar por radio
           });
 
-          console.log("Perfiles — reales cercanos:", usuariosRealesCercanos, "| total:", filtrados.length);
           setDbProfiles(filtrados);
         }
-      } catch(e) { console.log("Error cargando perfiles:", e); }
+      } catch(e) {
+        console.error("Error cargando perfiles:", e);
+        toast_("No pudimos cargar los perfiles. Probá recargar la app.","#E63946");
+      }
       setLoadingProfiles(false);
     };
     loadProfiles();
@@ -4317,7 +4281,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           return [...prev, ...nuevos];
         });
       }
-    }).catch(()=>{});
+    }).catch(e=>{
+      console.error("Error cargando conexiones:", e);
+      toast_("No pudimos cargar tus conexiones. Probá recargar la app.","#E63946");
+    });
   },[authData]);
 
   // Verificar suscripción activa y retorno de pago.
@@ -4445,7 +4412,8 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         setMatches(m=>[...m,cur]);
         setTimeout(()=>setMatchPop(cur),300);
         if(authData?.token && authData?.user?.id) {
-          supa.recordMatch(authData.token, authData.user.id, cur.id).catch(()=>{});
+          supa.recordMatch(authData.token, authData.user.id, cur.id)
+            .catch(e=>console.error("Error guardando match en Supabase:", e));
         }
       } else toast_("Interés enviado!");
     }
@@ -4692,15 +4660,6 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
           onValorar={userRol==="profesional"?v=>handleValorar(perfilViendo.id, v):null}
           onReportar={!esEmpresa?()=>setReportando(perfilViendo):null}/>
       )}
-      {showNueva&&<NuevaBusquedaModal userData={userData} uInit={uInit}
-        esPro={esPro}
-        obrasActivas={misBusquedas.filter(b=>b.estado!=="pausada").length}
-        setMisBusquedas={setMisBusquedas} toast_={toast_}
-        onSuscribir={()=>setShowSub(true)}
-        onClose={()=>setShowNueva(false)}/>}
-      {valorando&&<ModalValoracion match={valorando}
-        onSubmit={v=>{setValoraciones(p=>({...p,[valorando.id]:v}));toast_("Valoración enviada");}}
-        onClose={()=>setValorando(null)}/>}
       {reportando&&<ModalReporte
         persona={reportando}
         userData={userData}
@@ -5129,10 +5088,12 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                         <button onClick={async function(){
                           setMatches(function(prev){return prev.filter(function(_,j){return j!==i;});});
                           setConfirmElim(null);
+                          let borradoOk = true;
                           if(authData?.token && authData?.user?.id) {
-                            await supa.deleteMatch(authData.token, authData.user.id, m.id).catch(()=>{});
+                            try { await supa.deleteMatch(authData.token, authData.user.id, m.id); }
+                            catch(e) { borradoOk = false; console.error("Error eliminando conexión:", e); }
                           }
-                          toast_("Conexión eliminada");
+                          toast_(borradoOk ? "Conexión eliminada" : "Se quitó de la lista, pero puede reaparecer — hubo un error de conexión", borradoOk ? undefined : "#F4A261");
                         }}
                           style={{padding:"7px 10px",borderRadius:10,border:"none",
                             background:"#E63946",color:"#fff",fontWeight:700,fontSize:11,
@@ -6025,14 +5986,14 @@ export default function Safy() {
         };
         setObras(prev=>[...prev, primerAviso]);
         if(authData?.token) {
-          supa.createJob(authData.token, {...primerAviso, empresa_id: authData.user?.id}).catch(()=>{});
+          supa.createJob(authData.token, {...primerAviso, empresa_id: authData.user?.id})
+            .catch(e=>console.error("Error creando el primer aviso en Supabase:", e));
         }
       }
       // Guardar sesión
       if(authData) supa.saveSession(authData);
 
       // Guardar perfil en Supabase — esperar resultado
-      console.log("onComplete — authData:", authData ? {token: authData.token?.slice(0,30), userId: authData.user?.id, email: authData.email} : "NULL");
       if(authData?.token && authData?.user?.id) {
         const profileData = {
           id: authData.user.id, rol,
@@ -6055,9 +6016,12 @@ export default function Safy() {
           radio: Number(data.radio) || 30,
         };
         const result = await supa.upsertProfile(authData.token, profileData);
-        console.log("Resultado upsertProfile:", result);
+        if(result?.error) {
+          console.error("No se pudo guardar el perfil al completar el onboarding:", result.error);
+          alert("Hubo un problema guardando tu perfil. Podés revisarlo y volver a guardarlo desde 'Editar perfil'.");
+        }
       } else {
-        console.warn("Sin authData — no se pudo guardar perfil", authData);
+        console.error("Sin authData — no se pudo guardar perfil");
       }
       setPhase("app");
     }}/>
