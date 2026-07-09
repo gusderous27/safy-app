@@ -17,11 +17,40 @@ const STRIPE_LINKS = {
   empresa_anual:       "https://buy.stripe.com/test_dRm8wRguA5qm4Mv6hhffy03",
 };
 
+// Links de checkout de Mercado Pago ("Planes de suscripción", sin código).
+// Cómo generarlos (una vez por fila):
+//   1) Panel MP → Tu negocio → Planes de suscripción → Crear nuevo plan
+//   2) Precio y frecuencia: usar los valores de PLANES_MP de abajo
+//   3) En "URL de retorno" pegar EXACTO: https://safyjobs.com/?sub=ok&plan=<clave>
+//      (ej: https://safyjobs.com/?sub=ok&plan=profesional_mensual)
+//      Esto reutiliza el mismo flujo de confirmación que ya usa Stripe (ver el useEffect
+//      "Verificar suscripción activa y retorno de pago" en MainApp).
+//   4) Copiar el link que da MP y pegarlo acá abajo.
+//   5) Pegar el mismo preapproval_plan_id (va en el link, después de "?preapproval_plan_id=")
+//      en PLAN_POR_MP_PLAN_ID dentro de supabase/functions/mercadopago-webhook/index.ts
+//      — si no, el webhook no va a poder activar la suscripción aunque el pago sea real.
+const MP_LINKS = {
+  profesional_mensual: "",
+  profesional_anual:   "",
+  empresa_mensual:     "",
+  empresa_anual:       "",
+};
+
 const PLANES = {
   profesional_mensual: { id: "price_1Tr23hQkrzuq7ECF4P9iF6TV", precio: 2.99, moneda: "USD", periodo: "mensual", label: "$2.99/mes" },
   profesional_anual:   { id: "price_1Tr24JQkrzuq7ECF9eAghfLO", precio: 34.18, moneda: "USD", periodo: "anual", label: "$34.18/año" },
   empresa_mensual:     { id: "price_1Tr24iQkrzuq7ECFsygfUf9u", precio: 9.99, moneda: "USD", periodo: "mensual", label: "$9.99/mes" },
   empresa_anual:       { id: "price_1Tr255Qkrzuq7ECFvFVOROvV", precio: 113.89, moneda: "USD", periodo: "anual", label: "$113.89/año" },
+};
+
+// Precios de referencia en ARS para Mercado Pago (conversión aprox. jul-2026, ~1.490 ARS/USD).
+// Mercado Pago liquida en pesos, no en USD, así que Stripe cobra en USD y MP en ARS.
+// Ajustar el monto final en el panel de MP al crear cada plan; esto es solo lo que se muestra en la UI.
+const PLANES_MP = {
+  profesional_mensual: { precio: 4499,   label: "$4.499/mes" },
+  profesional_anual:   { precio: 49999,  label: "$49.999/año" },
+  empresa_mensual:     { precio: 14999,  label: "$14.999/mes" },
+  empresa_anual:       { precio: 169999, label: "$169.999/año" },
 };
 
 // Límites del plan gratuito
@@ -235,6 +264,28 @@ const supa = {
     return Array.isArray(d) ? d : [];
   },
 
+  // Guarda/actualiza la valoración que un usuario (rater) le da a otro (rated).
+  // Hace upsert por (rater_id, rated_id): re-valorar actualiza la valoración anterior
+  // en vez de duplicarla. El promedio real (profiles.rating_promedio) lo recalcula
+  // un trigger en la base — ver migración SQL.
+  async saveRating(token, raterId, ratedId, stars) {
+    const r = await fetch(
+      SUPA_URL + "/rest/v1/valoraciones?on_conflict=rater_id,rated_id",
+      {
+        method: "POST",
+        headers: { ...this.headers, "Authorization": "Bearer " + token,
+          "Prefer": "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify({
+          rater_id: raterId, rated_id: String(ratedId),
+          stars, updated_at: new Date().toISOString(),
+        })
+      }
+    );
+    if(!r.ok) { console.error("Error guardando valoración:", await r.text()); return null; }
+    const d = await r.json();
+    return Array.isArray(d) ? (d[0]||null) : d;
+  },
+
   async saveMensaje(token, chatId, userId, texto) {
     await fetch(SUPA_URL + "/rest/v1/mensajes", {
       method: "POST",
@@ -295,6 +346,11 @@ const supa = {
     return Array.isArray(d) ? (d[0] || null) : null;
   },
 
+  // OJO: ya no se usa desde el cliente (ver el useEffect de suscripción en MainApp). Con la RLS
+  // nueva de subscriptions esto va a devolver 403 si alguien lo llama — la
+  // activación real ahora la hacen las Edge Functions stripe-webhook /
+  // mercadopago-webhook con la service_role key. Se deja el método por si
+  // sirve para un panel admin interno con el token de un service role.
   async saveSubscription(token, sub) {
     const r = await fetch(SUPA_URL + "/rest/v1/subscriptions", {
       method: "POST",
@@ -1119,6 +1175,8 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
   const plan = PLANES[planKey];
   const precioAnual = PLANES[rol + "_anual"];
   const precioMensual = PLANES[rol + "_mensual"];
+  const planMP = PLANES_MP[planKey];
+  const precioMensualMP = PLANES_MP[rol + "_mensual"];
 
   const beneficios = rol === "profesional" ? [
     "⭐ Aparecés primero en las búsquedas",
@@ -1147,15 +1205,12 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
   };
 
   const handleMP = () => {
-    // Links de suscripción de MercadoPago
-    const MP_LINKS = {
-      profesional_mensual: "https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=2c9380849628a2a80196423d5e030230",
-      profesional_anual:   "https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=2c9380849628a2a80196423d5e030230",
-      empresa_mensual:     "https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=2c9380849628a2a80196423d5e030230",
-      empresa_anual:       "https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_plan_id=2c9380849628a2a80196423d5e030230",
-    };
-    // TODO: reemplazar con links reales de MercadoPago una vez creados
-    alert("Para pagar con MercadoPago, por favor usá la opción de tarjeta internacional por ahora. Estamos configurando MercadoPago.");
+    const link = MP_LINKS[planKey];
+    if(!link) {
+      alert("MercadoPago para este plan todavía no está configurado. Probá por ahora con tarjeta internacional (Stripe).");
+      return;
+    }
+    window.location.href = link;
   };
 
   return (
@@ -1201,12 +1256,18 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
       {/* Precio */}
       <div style={{textAlign:"center",marginBottom:20}}>
         <div style={{fontSize:48,fontWeight:800,color:"#fff",lineHeight:1}}>
-          {plan.precio.toLocaleString("es-AR",{style:"currency",currency:"USD"})}
+          {metodo==="mp"
+            ? planMP.precio.toLocaleString("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0})
+            : plan.precio.toLocaleString("es-AR",{style:"currency",currency:"USD"})}
         </div>
         <div style={{fontSize:13,color:"#8899bb",marginTop:4}}>
-          {periodo==="anual"
-            ? `Equivale a ${(plan.precio/12).toFixed(2)} USD/mes · Ahorrás ${(precioMensual.precio*12-plan.precio).toFixed(2)} USD`
-            : "por mes · cancelá cuando quieras"}
+          {metodo==="mp"
+            ? (periodo==="anual"
+                ? `Equivale a ${Math.round(planMP.precio/12).toLocaleString("es-AR")} ARS/mes · Ahorrás ${(precioMensualMP.precio*12-planMP.precio).toLocaleString("es-AR")} ARS`
+                : "por mes · pago en pesos argentinos · cancelá cuando quieras")
+            : (periodo==="anual"
+                ? `Equivale a ${(plan.precio/12).toFixed(2)} USD/mes · Ahorrás ${(precioMensual.precio*12-plan.precio).toFixed(2)} USD`
+                : "por mes · cancelá cuando quieras")}
         </div>
       </div>
 
@@ -1251,7 +1312,7 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
             background:loading?"#444":"linear-gradient(135deg, #F4A261, #e8853d)",
             color:"#1a1a2e",fontWeight:800,fontSize:16,cursor:loading?"not-allowed":"pointer",
             fontFamily:"inherit",boxShadow:"0 4px 20px rgba(244,162,97,0.4)"}}>
-          {loading?"Procesando...":`Suscribirme por ${plan.label}`}
+          {loading?"Procesando...":`Suscribirme por ${metodo==="mp"?planMP.label:plan.label}`}
         </button>
       </div>
 
@@ -3326,6 +3387,7 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
   const [urgente, setUrgente] = useState(init.urgente||false);
   const [modalidad,setModalidad] = useState(init.modalidad||"presencial");
   const [requisitos,setRequisitos] = useState(init.requisitos||[]);
+  const [reqOpen,setReqOpen] = useState(false);
   const [portales, setPortales] = useState(init.portales||[]);
   const [linkPostulacion, setLinkPostulacion] = useState(init.linkPostulacion||"");
   const [empresaNombre, setEmpresaNombre] = useState(
@@ -3535,63 +3597,76 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
           </div>
         </div>
 
-        {/* Requisitos de título */}
+        {/* Requisitos */}
         <div style={{marginBottom:18}}>
-          <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:4}}>
-            Requisitos de título <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional — seleccioná uno o más</span>
-          </label>
-          <div style={{fontSize:12,color:"#888",marginBottom:10}}>
-            {requisitos.length===0?"Sin requisitos definidos":requisitos.length+" seleccionado"+(requisitos.length!==1?"s":"")}
+          <div onClick={()=>setReqOpen(o=>!o)}
+            style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+              cursor:"pointer",padding:"10px 12px",borderRadius:10,
+              border:"1.5px solid #e0e0ef",background:"#fff"}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>
+                Requisitos <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+              </div>
+              <div style={{fontSize:12,color:"#888",marginTop:2}}>
+                {requisitos.length===0?"Sin requisitos definidos":requisitos.length+" seleccionado"+(requisitos.length!==1?"s":"")}
+              </div>
+            </div>
+            <span style={{fontSize:16,color:"#888",transform:reqOpen?"rotate(180deg)":"none",
+              transition:"transform .15s",flexShrink:0}}>
+              ⌄
+            </span>
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {[
-              {v:"sin_requisitos",    l:"Sin requisitos / Cualquier título"},
-              {v:"est_syh",           l:"Estudiante en Seguridad y Salud"},
-              {v:"tec_syh",           l:"Técnico en Seguridad y Salud"},
-              {v:"aud_syh",           l:"Auditor en Seguridad y Salud"},
-              {v:"lic_syh",           l:"Licenciado en Seguridad y Salud"},
-              {v:"ing_syh",           l:"Ingeniero en Seguridad y Salud"},
-              {v:"est_ma",            l:"Estudiante en Medio Ambiente"},
-              {v:"tec_ma",            l:"Técnico en Medio Ambiente"},
-              {v:"aud_ma",            l:"Auditor Ambiental"},
-              {v:"gest_ma",           l:"Gestor Ambiental"},
-              {v:"lic_ma",            l:"Licenciado en Ciencias Ambientales"},
-              {v:"ing_ma",            l:"Ingeniero Ambiental"},
-              {v:"osha30_con",        l:"OSHA 30 — Construcción"},
-              {v:"osha30_ind",        l:"OSHA 30 — Industria General"},
-              {v:"iso45001",          l:"Especialista ISO 45001"},
-              {v:"otros",             l:"Otros (especificar en descripción)"},
-            ].map(r=>{
-              const sel = requisitos.includes(r.v);
-              const toggle = () => {
-                if(r.v==="sin_requisitos") {
-                  setRequisitos(sel?[]:[r.v]);
-                } else {
-                  setRequisitos(prev=>{
-                    const sinReq = prev.filter(x=>x!=="sin_requisitos");
-                    return sel ? sinReq.filter(x=>x!==r.v) : [...sinReq, r.v];
-                  });
-                }
-              };
-              return (
-                <div key={r.v} onClick={toggle}
-                  style={{display:"flex",alignItems:"center",gap:10,
-                    padding:"10px 12px",borderRadius:10,cursor:"pointer",
-                    background:sel?"#f0f0ff":"#fff",
-                    border:sel?"1.5px solid #1a1a2e":"1.5px solid #e0e0ef",
-                    transition:"all .15s"}}>
-                  <div style={{width:20,height:20,borderRadius:5,flexShrink:0,
-                    border:sel?"2px solid #1a1a2e":"2px solid #ccc",
-                    background:sel?"#1a1a2e":"#fff",
-                    display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    {sel&&<span style={{color:"#fff",fontSize:13,lineHeight:1}}>✓</span>}
+          {reqOpen&&(
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:8}}>
+              {[
+                {v:"sin_requisitos",    l:"Sin requisitos / Cualquier título"},
+                {v:"est_syh",           l:"Estudiante en Seguridad y Salud"},
+                {v:"tec_syh",           l:"Técnico en Seguridad y Salud"},
+                {v:"aud_syh",           l:"Auditor en Seguridad y Salud"},
+                {v:"lic_syh",           l:"Licenciado en Seguridad y Salud"},
+                {v:"ing_syh",           l:"Ingeniero en Seguridad y Salud"},
+                {v:"est_ma",            l:"Estudiante en Medio Ambiente"},
+                {v:"tec_ma",            l:"Técnico en Medio Ambiente"},
+                {v:"aud_ma",            l:"Auditor Ambiental"},
+                {v:"gest_ma",           l:"Gestor Ambiental"},
+                {v:"lic_ma",            l:"Licenciado en Ciencias Ambientales"},
+                {v:"ing_ma",            l:"Ingeniero Ambiental"},
+                {v:"osha30_con",        l:"OSHA 30 — Construcción"},
+                {v:"osha30_ind",        l:"OSHA 30 — Industria General"},
+                {v:"iso45001",          l:"Especialista ISO 45001"},
+                {v:"otros",             l:"Otros (especificar en descripción)"},
+              ].map(r=>{
+                const sel = requisitos.includes(r.v);
+                const toggle = () => {
+                  if(r.v==="sin_requisitos") {
+                    setRequisitos(sel?[]:[r.v]);
+                  } else {
+                    setRequisitos(prev=>{
+                      const sinReq = prev.filter(x=>x!=="sin_requisitos");
+                      return sel ? sinReq.filter(x=>x!==r.v) : [...sinReq, r.v];
+                    });
+                  }
+                };
+                return (
+                  <div key={r.v} onClick={toggle}
+                    style={{display:"flex",alignItems:"center",gap:10,
+                      padding:"10px 12px",borderRadius:10,cursor:"pointer",
+                      background:sel?"#f0f0ff":"#fff",
+                      border:sel?"1.5px solid #1a1a2e":"1.5px solid #e0e0ef",
+                      transition:"all .15s"}}>
+                    <div style={{width:20,height:20,borderRadius:5,flexShrink:0,
+                      border:sel?"2px solid #1a1a2e":"2px solid #ccc",
+                      background:sel?"#1a1a2e":"#fff",
+                      display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {sel&&<span style={{color:"#fff",fontSize:13,lineHeight:1}}>✓</span>}
+                    </div>
+                    <span style={{fontSize:13,fontWeight:sel?700:400,
+                      color:sel?"#1a1a2e":"#555"}}>{r.l}</span>
                   </div>
-                  <span style={{fontSize:13,fontWeight:sel?700:400,
-                    color:sel?"#1a1a2e":"#555"}}>{r.l}</span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
         <Honorarios value={pres} moneda={moneda} onValue={setPres} onMoneda={setMoneda}/>
 
@@ -3893,7 +3968,9 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   const [loadingProfiles,setLoadingProfiles] = useState(false);
   const [showSub,setShowSub]           = useState(false);
   const [suscripcion,setSuscripcion]   = useState(null); // null = free
-  const esPro = suscripcion?.estado === "activa";
+  const [verificandoPago,setVerificandoPago] = useState(false); // esperando confirmación del webhook
+  const esPro = suscripcion?.estado === "activa"
+    && (!suscripcion.vencimiento || new Date(suscripcion.vencimiento) > new Date());
   // Profesional no necesita obras de Root — empresa sí
   const [obrasLocales, setObrasLocales] = useState(esEmpresa ? (initObras||[]) : (initObras||[]));
   const obras = obrasLocales;
@@ -3950,7 +4027,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               disponible: p.disponible !== false,
               tarifa: p.tarifa || 0,
               moneda: p.moneda || "ARS",
-              rating: null,
+              rating: p.rating_promedio || null,
               esSeed,
               distanciaReal,
             };
@@ -4006,6 +4083,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 disponible: perfil.disponible !== false,
                 tarifa: perfil.tarifa || 0,
                 moneda: perfil.moneda || "ARS",
+                rating: perfil.rating_promedio || perfil.rating || null,
                 created_at: r.created_at,
               };
             }
@@ -4028,38 +4106,49 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     }).catch(()=>{});
   },[authData]);
 
-  // Verificar suscripción activa y retorno de pago
+  // Verificar suscripción activa y retorno de pago.
+  // IMPORTANTE: la activación real de la suscripción la hace el backend
+  // (Supabase Edge Function) al recibir y verificar el webhook de Stripe/MercadoPago,
+  // NUNCA el cliente. Acá solo mostramos el estado y, si venimos de un checkout,
+  // esperamos (polling) a que el webhook la confirme — no la escribimos nosotros.
   useEffect(()=>{
-    const checkSub = async () => {
-      if(!authData?.token || !authData?.user?.id) return;
-      // Verificar si viene de un pago exitoso
-      const params = new URLSearchParams(window.location.search);
-      if(params.get("sub")==="ok") {
-        const planKey = params.get("plan") || "";
-        const planInfo = PLANES[planKey];
-        if(planInfo && authData?.token) {
-          const vencimiento = new Date();
-          if(planInfo.periodo==="mensual") vencimiento.setMonth(vencimiento.getMonth()+1);
-          else vencimiento.setFullYear(vencimiento.getFullYear()+1);
-          const newSub = {
-            user_id: authData.user.id,
-            plan: planKey.split("_")[0],
-            periodo: planInfo.periodo,
-            estado: "activa",
-            vencimiento: vencimiento.toISOString(),
-          };
-          await supa.saveSubscription(authData.token, newSub);
-          setSuscripcion({...newSub, estado:"activa"});
-          window.history.replaceState(null,"",window.location.pathname);
-        }
-      }
-      // Cargar suscripción existente
+    if(!authData?.token || !authData?.user?.id) return;
+    let cancelado = false;
+
+    const cargarSub = async () => {
       try {
         const sub = await supa.getSubscription(authData.token, authData.user.id);
-        if(sub) setSuscripcion(sub);
-      } catch(e) {}
+        if(sub && !cancelado) setSuscripcion(sub);
+        return sub;
+      } catch(e) { return null; }
     };
-    checkSub();
+
+    const params = new URLSearchParams(window.location.search);
+    if(params.get("sub")==="ok") {
+      // Venimos de un checkout: limpiar la URL y esperar la confirmación real del webhook.
+      window.history.replaceState(null,"",window.location.pathname);
+      setVerificandoPago(true);
+      let intentos = 0;
+      const poll = async () => {
+        if(cancelado) return;
+        const sub = await cargarSub();
+        intentos++;
+        if(sub && sub.estado==="activa") {
+          setVerificandoPago(false);
+          toast_("¡Suscripción activada! ✓");
+        } else if(intentos>=15) {
+          setVerificandoPago(false);
+          toast_("Tu pago está siendo procesado. Puede tardar unos minutos en reflejarse.","#F4A261");
+        } else {
+          setTimeout(poll, 2000);
+        }
+      };
+      poll();
+    } else {
+      cargarSub();
+    }
+
+    return ()=>{ cancelado = true; };
   },[authData]);
 
   const empNombre = userData.empresa||userData.nombre||"";
@@ -4107,6 +4196,24 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   const toast_ = (msg,color) => {
     setToast({msg,color:color||"#2A9D8F"});
     setTimeout(()=>setToast(null),2500);
+  };
+
+  // Guarda una valoración (1-5 estrellas) sobre otro perfil y refleja el
+  // promedio real actualizado en pantalla, sin cerrar ni navegar a otro lado.
+  const handleValorar = async (personaId, {stars}) => {
+    if(!authData?.token || !authData?.user?.id || !personaId) return;
+    try {
+      await supa.saveRating(authData.token, authData.user.id, personaId, stars);
+      const actualizado = await supa.getProfileById(SUPA_KEY, personaId);
+      const nuevoPromedio = actualizado?.rating_promedio || stars;
+      setDbProfiles(prev=>prev.map(p=>String(p.id)===String(personaId)?{...p,rating:nuevoPromedio}:p));
+      setMatches(prev=>prev.map(m=>String(m.id)===String(personaId)?{...m,rating:nuevoPromedio}:m));
+      setPerfilViendo(prev=>prev&&String(prev.id)===String(personaId)?{...prev,rating:nuevoPromedio}:prev);
+      toast_("Valoración guardada ✓");
+    } catch(e) {
+      console.error("Error guardando valoración:", e);
+      toast_("No se pudo guardar la valoración","#E63946");
+    }
   };
   const swipe = dir => {
     const cur=items[idx];
@@ -4163,7 +4270,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       {perfilViendo&&(
         <PerfilCompleto persona={perfilViendo} onClose={()=>setPerfilViendo(null)}
           onChat={()=>{setChatWith(perfilViendo);setPerfilViendo(null);}}
-          onValorar={userRol==="profesional"?v=>{setValoraciones(p=>({...p,[perfilViendo.id]:v}));setPerfilViendo(null);}:null}
+          onValorar={userRol==="profesional"?v=>handleValorar(perfilViendo.id, v):null}
           onReportar={!esEmpresa?()=>setReportando(perfilViendo):null}/>
       )}
       <div style={{background:"#1a1a2e",padding:"14px 20px",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
@@ -4365,7 +4472,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       {perfilViendo&&(
         <PerfilCompleto persona={perfilViendo} onClose={()=>setPerfilViendo(null)}
           onChat={()=>{setChatWith(perfilViendo);setPerfilViendo(null);}}
-          onValorar={userRol==="profesional"?v=>{setValoraciones(p=>({...p,[perfilViendo.id]:v}));setPerfilViendo(null);}:null}
+          onValorar={userRol==="profesional"?v=>handleValorar(perfilViendo.id, v):null}
           onReportar={!esEmpresa?()=>setReportando(perfilViendo):null}/>
       )}
       {showNueva&&<NuevaBusquedaModal userData={userData} uInit={uInit}
@@ -4401,6 +4508,12 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         onClose={()=>setMatchPop(null)}
         onGoToMatches={()=>{setMatchPop(null);setTab("matches");}}/>}
 
+      {verificandoPago&&(
+        <div style={{background:"#F4A261",color:"#1a1a2e",padding:"8px 16px",
+          fontSize:12,fontWeight:700,textAlign:"center",position:"sticky",top:0,zIndex:101}}>
+          ⏳ Confirmando tu pago con el banco/procesador… no cierres la app
+        </div>
+      )}
       {/* HEADER */}
       <div style={{background:"#1a1a2e",color:"#fff",padding:"13px 20px 11px",
         display:"flex",justifyContent:"space-between",alignItems:"center",
