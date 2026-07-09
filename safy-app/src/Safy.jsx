@@ -2452,12 +2452,16 @@ const ChatWindow = ({match,userData,onClose,onSuscribir,authData}) => {
     if(authData?.token && authData?.user?.id) {
       supa.saveMensaje(authData.token, chatId, authData.user.id, texto).catch(()=>{});
     }
-    const rs=["¿Qué días tenés disponibles?","¿Podés enviarme tu CV?","¿Cuál es tu tarifa?","Te mando más detalles.","¿Tenés experiencia en el sector?"];
-    setTimeout(()=>{
-      const now2=new Date();
-      const t2=now2.getHours()+":"+String(now2.getMinutes()).padStart(2,"0");
-      setMsgs(m=>[...m,{from:"them",text:rs[Math.floor(Math.random()*rs.length)],time:t2}]);
-    },1200);
+    // Solo responder automáticamente si NO es un perfil seed
+    const esSeed = match?.id && String(match.id).startsWith("00000000-");
+    if(!esSeed) {
+      const rs=["¿Qué días tenés disponibles?","¿Podés enviarme tu CV?","¿Cuál es tu tarifa?","Te mando más detalles.","¿Tenés experiencia en el sector?"];
+      setTimeout(()=>{
+        const now2=new Date();
+        const t2=now2.getHours()+":"+String(now2.getMinutes()).padStart(2,"0");
+        setMsgs(m=>[...m,{from:"them",text:rs[Math.floor(Math.random()*rs.length)],time:t2}]);
+      },1200);
+    }
   };
   return (
     <div style={{position:"fixed",inset:0,background:"#f0f0f8",zIndex:800,
@@ -3875,6 +3879,12 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
 
   // obras = todas las obras disponibles (feed para profesionales)
   // Si es empresa: sus propias obras son las que tienen su nombre
+  // Cargar swipes guardados del localStorage para no repetir perfiles
+  const [swipeados, setSwipeados] = useState(()=>{
+    try { return JSON.parse(localStorage.getItem("safy_swipes_"+authData?.user?.id)||"[]"); }
+    catch(e) { return []; }
+  });
+
   // Cargar perfiles reales de Supabase al montar
   useEffect(()=>{
     const loadProfiles = async () => {
@@ -3882,34 +3892,49 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       try {
         const profiles = await supa.getProfiles(authData?.token, userRol);
         if(Array.isArray(profiles) && profiles.length > 0) {
-          // Mapear perfiles de DB al formato de la app
-          const mapped = profiles.map(p => ({
-            ...p,
-            id: p.id,
-            nombre: p.nombre || "Sin nombre",
-            apellido: p.apellido || "",
-            avatar: p.nombre ? (p.nombre[0]+(p.apellido?p.apellido[0]:"")).toUpperCase() : "??",
-            color: "#2A9D8F",
-            skills: p.skills || [],
-            obras: [],
-            perfil: p.perfil || "",
-            disponible: p.disponible !== false,
-            tarifa: p.tarifa || 0,
-            moneda: p.moneda || "ARS",
-            rating: null,
-            // Calcular distancia real si ambos tienen coords
-            distanciaReal: (userData.lat && userData.lng && p.lat && p.lng)
+          const mapped = profiles.map(p => {
+            const initials = p.nombre
+              ? (p.nombre[0]+(p.apellido?p.apellido[0]:"")).toUpperCase()
+              : (p.empresa||"??").slice(0,2).toUpperCase();
+            const colores = ["#E63946","#2A9D8F","#7B2D8B","#F4A261","#264653","#1D9BF0","#2ecc71"];
+            const color = colores[Math.abs((p.id||"").charCodeAt(0)||0) % colores.length];
+            const esSeed = (p.id||"").startsWith("00000000-");
+            const distanciaReal = (userData.lat && userData.lng && p.lat && p.lng)
               ? Math.round(haversine(userData.lat, userData.lng, p.lat, p.lng))
-              : null,
-          }));
-
-          // Filtrar por radio si el usuario tiene coordenadas
-          const radioKm = Number(userData.radio) || 9999;
-          const filtrados = mapped.filter(p => {
-            if(!userData.lat || !userData.lng || !p.lat || !p.lng) return true; // Sin coords, mostrar igual
-            return p.distanciaReal <= radioKm;
+              : null;
+            return {
+              ...p,
+              nombre: p.nombre || p.empresa || "Sin nombre",
+              apellido: p.apellido || "",
+              avatar: initials,
+              color: color,
+              skills: p.skills || [],
+              obras: [],
+              perfil: p.perfil || "",
+              disponible: p.disponible !== false,
+              tarifa: p.tarifa || 0,
+              moneda: p.moneda || "ARS",
+              rating: null,
+              esSeed,
+              distanciaReal,
+            };
           });
 
+          // Filtro de radio:
+          // - Usuarios reales: solo dentro del radio configurado (si tienen coords)
+          // - Perfiles seed: siempre visibles como relleno hasta tener usuarios reales cercanos
+          const radioKm = Number(userData.radio) || 9999;
+          const usuariosRealesCercanos = mapped.filter(p =>
+            !p.esSeed && p.distanciaReal !== null && p.distanciaReal <= radioKm
+          ).length;
+
+          const filtrados = mapped.filter(p => {
+            if(p.esSeed) return true; // seed siempre visible
+            if(!userData.lat || !userData.lng || !p.lat || !p.lng) return true; // sin coords, mostrar
+            return p.distanciaReal <= radioKm; // reales: filtrar por radio
+          });
+
+          console.log("Perfiles — reales cercanos:", usuariosRealesCercanos, "| total:", filtrados.length);
           setDbProfiles(filtrados);
         }
       } catch(e) { console.log("Error cargando perfiles:", e); }
@@ -4014,8 +4039,9 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   const todosLosProfesionales = [
     ...dbProfiles.filter(p=>p.rol==="profesional"),
   ].filter(p=>{
-    if(String(p.id)===String(authData?.user?.id)) return false; // no mostrar el propio perfil
+    if(String(p.id)===String(authData?.user?.id)) return false;
     if(bloqueados.includes(p.id)) return false;
+    if(swipeados.includes(String(p.id))) return false; // ya swipeado
     if(filtros.sector && !p.skills?.some(s=>s.toLowerCase().includes(filtros.sector.toLowerCase()))) return false;
     if(filtros.disponible && !p.disponible) return false;
     return true;
@@ -4026,6 +4052,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     ...obras,
   ].filter(p=>{
     if(String(p.id)===String(authData?.user?.id)) return false;
+    if(swipeados.includes(String(p.id))) return false; // ya swipeado
     return true;
   });
 
@@ -4043,11 +4070,16 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   };
   const swipe = dir => {
     const cur=items[idx];
+    if(!cur) return;
+    // Guardar swipe en localStorage para no repetir
+    const nuevoSwipeados = [...swipeados, String(cur.id)];
+    setSwipeados(nuevoSwipeados);
+    try { localStorage.setItem("safy_swipes_"+authData?.user?.id, JSON.stringify(nuevoSwipeados)); } catch(e) {}
+
     if(dir==="yes"){
       if(Math.random()>.4){
         setMatches(m=>[...m,cur]);
         setTimeout(()=>setMatchPop(cur),300);
-        // Guardar match en Supabase
         if(authData?.token && authData?.user?.id) {
           supa.recordMatch(authData.token, authData.user.id, cur.id).catch(()=>{});
         }
@@ -4277,7 +4309,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 disponible: d.disponibilidad === "disponible" || d.disponible === true,
                 disponibilidad: d.disponibilidad || null,
                 horario: d.horario || null,
-                seguro: d.seguro !== undefined ? d.seguro : false,
+                seguro: d.seguro === true ? true : false,
                 foto: fotoUrl,
                 radio: Number(d.radio) || 30,
               });
