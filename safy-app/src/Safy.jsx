@@ -4224,7 +4224,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     try { localStorage.setItem("safy_swipes_"+authData?.user?.id, JSON.stringify(nuevoSwipeados)); } catch(e) {}
 
     if(dir==="yes"){
-      if(Math.random()>.4){
+      // Perfiles semilla: matchean 1 de cada 10 (antes matcheaba ~6 de cada 10 y se sentía
+      // artificial). Perfiles reales: se mantiene la probabilidad de antes.
+      const chanceMatch = cur.esSeed ? 0.10 : 0.6;
+      if(Math.random()<chanceMatch){
         setMatches(m=>[...m,cur]);
         setTimeout(()=>setMatchPop(cur),300);
         if(authData?.token && authData?.user?.id) {
