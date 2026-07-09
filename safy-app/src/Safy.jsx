@@ -206,6 +206,13 @@ const supa = {
     return Array.isArray(d) ? (d[0] || null) : null;
   },
 
+  async deleteMatch(token, userId, targetId) {
+    await fetch(SUPA_URL + "/rest/v1/matches?user1_id=eq." + userId + "&user2_id=eq." + targetId, {
+      method: "DELETE",
+      headers: { ...this.headers, "Authorization": "Bearer " + token }
+    });
+  },
+
   async getMatches(token, userId) {
     const r = await fetch(
       SUPA_URL + "/rest/v1/matches?user1_id=eq." + userId + "&select=*&order=created_at.desc",
@@ -386,61 +393,11 @@ const SECTORES = [
 const DIAS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 const ADMIN_CODE = "safy2025";
 
-const profesionales = [
-  {id:1,nombre:"Carla",apellido:"Méndez",titulo:"lic",ciudad:"Buenos Aires",pais:"AR",
-   distancia:3,tarifa:2800,moneda:"ARS",disponible:true,
-   perfil:"8 años en obra civil y plantas industriales. Especialidad en altura y espacios confinados.",
-   obras:["Torre Catalinas Norte","Planta YPF Ensenada"],
-   avatar:"CM",color:"#E63946",skills:["Trabajo en Altura","NFPA 70E","Ergonomía"],
-   rating:4.8,trabajos:34,email:"carla.mendez@gmail.com",tel:"+54 9 11 4421-0033"},
-  {id:2,nombre:"Roberto",apellido:"Funes",titulo:"tec",ciudad:"Rosario",pais:"AR",
-   distancia:12,tarifa:1900,moneda:"ARS",disponible:true,
-   perfil:"6 años en obras viales y minería. Manejo de explosivos certificado.",
-   obras:["Ruta Nacional 9","Viaducto Mendoza"],
-   avatar:"RF",color:"#2A9D8F",skills:["Seguridad Vial","Análisis de Riesgos"],
-   rating:4.6,trabajos:21,email:"rfunes@gmail.com",tel:"+54 9 341 558-2290"},
-  {id:3,nombre:"Sofía",apellido:"Peralta",titulo:"ing",ciudad:"Córdoba",pais:"AR",
-   distancia:7,tarifa:35,moneda:"USD",disponible:false,
-   perfil:"12 años. Especialista en riesgo eléctrico y auditorías. Certificada IRAM.",
-   obras:["EPEC Central Térmica","Volkswagen Pacheco"],
-   avatar:"SP",color:"#7B2D8B",skills:["Riesgo Eléctrico","ISO 45001","Auditorías"],
-   rating:4.9,trabajos:57,email:"sofia.peralta@gmail.com",tel:"+54 9 351 442-1100"},
-  {id:4,nombre:"Diego",apellido:"Acuña",titulo:"tec",ciudad:"Mendoza",pais:"AR",
-   distancia:5,tarifa:2100,moneda:"ARS",disponible:true,
-   perfil:"4 años en industria vitivinícola. Certificado HACCP.",
-   obras:["Bodega Catena Zapata","Planta Nestlé"],
-   avatar:"DA",color:"#F4A261",skills:["Ergonomía","Capacitaciones"],
-   rating:4.4,trabajos:18,email:"diegoacuna@gmail.com",tel:"+54 9 261 334-7788"},
-  {id:5,nombre:"Valeria",apellido:"Sosa",titulo:"lic",ciudad:"La Plata",pais:"AR",
-   distancia:9,tarifa:2600,moneda:"ARS",disponible:true,
-   perfil:"7 años en infraestructura y hospitales. Especialista en residuos peligrosos.",
-   obras:["Hospital El Cruce","Puerto La Plata"],
-   avatar:"VS",color:"#264653",skills:["Res. Peligrosos","Gestión de Emergencias"],
-   rating:4.7,trabajos:29,email:"valeria.sosa@gmail.com",tel:"+54 9 221 445-9922"},
-];
+const profesionales = [];
+// Los perfiles se cargan desde Supabase (260 perfiles seed en la DB)
 
-const OBRAS_SEED = [
-  {id:101,empresa:"Constructora Omega S.A.",tipo:"Obra civil",ciudad:"Buenos Aires",
-   distancia:2,presupuesto:3200,moneda:"ARS",duracion:"3 meses",urgente:true,
-   descripcion:"Torre de 22 pisos en Palermo. Programa de seguridad, recorridas y APT.",
-   requisitos:["Licenciado o Técnico","Exp. en altura"],
-   avatar:"CO",color:"#E63946",email:"rrhh@omega.com.ar",tel:"+54 11 4800-0000"},
-  {id:102,empresa:"Petroquímica del Sur",tipo:"Industria petroquímica",ciudad:"Bahía Blanca",
-   distancia:14,presupuesto:4100,moneda:"ARS",duracion:"6 meses",urgente:false,
-   descripcion:"Planta de refinación. Programa anual y gestión de emergencias.",
-   requisitos:["Ingeniero o Licenciado","NFPA"],
-   avatar:"PS",color:"#2A9D8F",email:"seguridad@petrosur.com",tel:"+54 291 4500-100"},
-  {id:103,empresa:"Vial Patagónica SA",tipo:"Obra vial",ciudad:"Neuquén",
-   distancia:22,presupuesto:2700,moneda:"ARS",duracion:"4 meses",urgente:true,
-   descripcion:"Pavimentación Ruta 22. Programa de Seguridad y supervisión diaria.",
-   requisitos:["Técnico o Licenciado","Exp. vial"],
-   avatar:"VP",color:"#F4A261",email:"obras@vialpatagonicasa.com",tel:"+54 299 4400-200"},
-  {id:104,empresa:"Laboratorios Biol",tipo:"Industria farmacéutica",ciudad:"Buenos Aires",
-   distancia:6,presupuesto:40,moneda:"USD",duracion:"Indefinido",urgente:false,
-   descripcion:"Relación de dependencia. Gestión integral SyH, ISO 45001 y auditorías.",
-   requisitos:["Licenciado o Ingeniero","ISO 45001"],
-   avatar:"LB",color:"#7B2D8B",email:"rrhh@biol.com",tel:"+54 11 5200-8800"},
-];
+const OBRAS_SEED = [];
+// Los avisos de empresas se cargan desde Supabase
 
 // ─── CSS ─────────────────────────────────────────────────────────────────────
 
@@ -4749,34 +4706,36 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                         color:"#fff",border:"none",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                       Chatear
                     </button>
-                    {esEmpresa&&(
-                      confirmElim===i?(
-                        <div style={{display:"flex",gap:6}}>
-                          <button onClick={function(){
-                            setEstadosPost(function(p){return {...p,[m.id]:"descartado"};});
-                            setMatches(function(prev){return prev.filter(function(_,j){return j!==i;});});
-                            setConfirmElim(null);
-                          }}
-                            style={{padding:"7px 10px",borderRadius:10,border:"none",
-                              background:"#E63946",color:"#fff",fontWeight:700,fontSize:11,
-                              cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                            Si, eliminar
-                          </button>
-                          <button onClick={function(){setConfirmElim(null);}}
-                            style={{padding:"7px 10px",borderRadius:10,border:"1.5px solid #e0e0ef",
-                              background:"#fff",color:"#888",fontWeight:600,fontSize:11,
-                              cursor:"pointer",fontFamily:"inherit"}}>
-                            No
-                          </button>
-                        </div>
-                      ):(
-                        <button onClick={function(){setConfirmElim(i);}}
-                          style={{padding:"10px 11px",borderRadius:12,background:"#fdecea",
-                            color:"#E63946",border:"1.5px solid #fca5a5",fontSize:15,
-                            cursor:"pointer",fontFamily:"inherit"}}>
-                          🗑
+                    {confirmElim===i?(
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={async function(){
+                          setMatches(function(prev){return prev.filter(function(_,j){return j!==i;});});
+                          setConfirmElim(null);
+                          if(authData?.token && authData?.user?.id) {
+                            await supa.deleteMatch(authData.token, authData.user.id, m.id).catch(()=>{});
+                          }
+                          toast_("Conexión eliminada");
+                        }}
+                          style={{padding:"7px 10px",borderRadius:10,border:"none",
+                            background:"#E63946",color:"#fff",fontWeight:700,fontSize:11,
+                            cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                          Sí, eliminar
                         </button>
-                      )
+                        <button onClick={function(){setConfirmElim(null);}}
+                          style={{padding:"7px 10px",borderRadius:10,border:"1.5px solid #e0e0ef",
+                            background:"#fff",color:"#888",fontWeight:600,fontSize:11,
+                            cursor:"pointer",fontFamily:"inherit"}}>
+                          No
+                        </button>
+                      </div>
+                    ):(
+                      <button onClick={function(){setConfirmElim(i);}}
+                        style={{padding:"10px 11px",borderRadius:12,background:"#fdecea",
+                          color:"#E63946",border:"1.5px solid #fca5a5",fontSize:15,
+                          cursor:"pointer",fontFamily:"inherit"}}
+                        title="Eliminar conexión">
+                        🗑
+                      </button>
                     )}
                   </div>
                 </div>
