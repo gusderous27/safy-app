@@ -202,9 +202,16 @@ const supa = {
     });
   },
 
-  async getProfileById(token, userId) {
+  async getProfileById(tokenOrKey, userId) {
+    const authHeader = tokenOrKey && tokenOrKey.startsWith("sb_") 
+      ? tokenOrKey  // es la SUPA_KEY directa
+      : "Bearer " + tokenOrKey; // es un token de usuario
     const r = await fetch(SUPA_URL + "/rest/v1/profiles?id=eq." + userId + "&select=*", {
-      headers: { ...this.headers, "Authorization": "Bearer " + token }
+      headers: { 
+        "Content-Type": "application/json",
+        "apikey": SUPA_KEY, 
+        "Authorization": authHeader.startsWith("Bearer") ? authHeader : "Bearer " + SUPA_KEY
+      }
     });
     if(!r.ok) return null;
     const d = await r.json();
@@ -3530,29 +3537,60 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
 
         {/* Requisitos de título */}
         <div style={{marginBottom:18}}>
-          <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
-            {esEmpresa?"Perfil requerido":"Título que tenés"} <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional</span>
+          <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:4}}>
+            Requisitos de título <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>Opcional — seleccioná uno o más</span>
           </label>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          <div style={{fontSize:12,color:"#888",marginBottom:10}}>
+            {requisitos.length===0?"Sin requisitos definidos":requisitos.length+" seleccionado"+(requisitos.length!==1?"s":"")}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
             {[
-              {v:"estudiante",l:"Estudiante"},
-              {v:"tecnico",l:"Técnico"},
-              {v:"auditor",l:"Auditor"},
-              {v:"licenciado",l:"Licenciado"},
-              {v:"ingeniero",l:"Ingeniero"},
-              {v:"cualquiera",l:"Cualquier título"},
-            ].map(r=>(
-              <button key={r.v}
-                onClick={()=>setRequisitos(prev=>
-                  prev.includes(r.v)?prev.filter(x=>x!==r.v):[...prev,r.v]
-                )}
-                style={{padding:"6px 12px",borderRadius:99,fontSize:12,fontWeight:600,
-                  border:requisitos.includes(r.v)?"2px solid #1a1a2e":"2px solid #e0e0ef",
-                  background:requisitos.includes(r.v)?"#1a1a2e":"#fff",
-                  color:requisitos.includes(r.v)?"#fff":"#888",cursor:"pointer",fontFamily:"inherit"}}>
-                {r.l}
-              </button>
-            ))}
+              {v:"sin_requisitos",    l:"Sin requisitos / Cualquier título"},
+              {v:"est_syh",           l:"Estudiante en Seguridad y Salud"},
+              {v:"tec_syh",           l:"Técnico en Seguridad y Salud"},
+              {v:"aud_syh",           l:"Auditor en Seguridad y Salud"},
+              {v:"lic_syh",           l:"Licenciado en Seguridad y Salud"},
+              {v:"ing_syh",           l:"Ingeniero en Seguridad y Salud"},
+              {v:"est_ma",            l:"Estudiante en Medio Ambiente"},
+              {v:"tec_ma",            l:"Técnico en Medio Ambiente"},
+              {v:"aud_ma",            l:"Auditor Ambiental"},
+              {v:"gest_ma",           l:"Gestor Ambiental"},
+              {v:"lic_ma",            l:"Licenciado en Ciencias Ambientales"},
+              {v:"ing_ma",            l:"Ingeniero Ambiental"},
+              {v:"osha30_con",        l:"OSHA 30 — Construcción"},
+              {v:"osha30_ind",        l:"OSHA 30 — Industria General"},
+              {v:"iso45001",          l:"Especialista ISO 45001"},
+              {v:"otros",             l:"Otros (especificar en descripción)"},
+            ].map(r=>{
+              const sel = requisitos.includes(r.v);
+              const toggle = () => {
+                if(r.v==="sin_requisitos") {
+                  setRequisitos(sel?[]:[r.v]);
+                } else {
+                  setRequisitos(prev=>{
+                    const sinReq = prev.filter(x=>x!=="sin_requisitos");
+                    return sel ? sinReq.filter(x=>x!==r.v) : [...sinReq, r.v];
+                  });
+                }
+              };
+              return (
+                <div key={r.v} onClick={toggle}
+                  style={{display:"flex",alignItems:"center",gap:10,
+                    padding:"10px 12px",borderRadius:10,cursor:"pointer",
+                    background:sel?"#f0f0ff":"#fff",
+                    border:sel?"1.5px solid #1a1a2e":"1.5px solid #e0e0ef",
+                    transition:"all .15s"}}>
+                  <div style={{width:20,height:20,borderRadius:5,flexShrink:0,
+                    border:sel?"2px solid #1a1a2e":"2px solid #ccc",
+                    background:sel?"#1a1a2e":"#fff",
+                    display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {sel&&<span style={{color:"#fff",fontSize:13,lineHeight:1}}>✓</span>}
+                  </div>
+                  <span style={{fontSize:13,fontWeight:sel?700:400,
+                    color:sel?"#1a1a2e":"#555"}}>{r.l}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
         <Honorarios value={pres} moneda={moneda} onValue={setPres} onMoneda={setMoneda}/>
@@ -3636,17 +3674,15 @@ const NuevaBusquedaModal = ({userData,uInit,esEmpresa,verificado,esPro,obrasActi
               backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E\")",
               backgroundRepeat:"no-repeat",backgroundPosition:"right 14px center"}}>
             <option value="">Seleccioná un portal...</option>
-            <optgroup label="📍 Argentina">
-              <option value="Computrabajo">Computrabajo</option>
-              <option value="ZonaJobs">ZonaJobs</option>
-              <option value="BumerAN">BumerAN</option>
-              <option value="Trabajando.com">Trabajando.com</option>
-            </optgroup>
             <optgroup label="🌎 LATAM">
+              <option value="Computrabajo">Computrabajo (AR/MX/CO/PE/CL)</option>
+              <option value="ZonaJobs">ZonaJobs (AR)</option>
+              <option value="BumerAN">BumerAN (AR)</option>
+              <option value="Trabajando.com">Trabajando.com (AR/CL/CO)</option>
               <option value="LinkedIn">LinkedIn</option>
               <option value="Indeed">Indeed</option>
               <option value="Get on Board">Get on Board</option>
-              <option value="Multitrabajos">Multitrabajos</option>
+              <option value="Multitrabajos">Multitrabajos (AR/PE/EC)</option>
               <option value="OCC Mundial">OCC Mundial (MX)</option>
               <option value="El Empleo">El Empleo (CO)</option>
               <option value="Aptitus">Aptitus (PE)</option>
@@ -3951,25 +3987,29 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         // Para cada match, cargar el perfil completo del otro usuario
         const matchesConDatos = await Promise.all(rows.map(async r=>{
           try {
-            const perfil = await supa.getProfileById(authData.token, r.user2_id);
+            // Primero buscar en dbProfiles (ya cargados) para evitar requests extra
+            const enCache = dbProfiles.find(p=>String(p.id)===String(r.user2_id));
+            const perfil = enCache || await supa.getProfileById(SUPA_KEY, r.user2_id);
             if(perfil) {
+              const initials = perfil.nombre
+                ? (perfil.nombre[0]+(perfil.apellido||"?")[0]).toUpperCase()
+                : (perfil.empresa||"??").slice(0,2).toUpperCase();
+              const colores = ["#E63946","#2A9D8F","#7B2D8B","#F4A261","#264653","#1D9BF0"];
+              const color = colores[Math.abs((perfil.id||"").charCodeAt(0)||0) % colores.length];
               return {
+                ...perfil, // spread completo del perfil
                 id: r.user2_id,
-                nombre: perfil.nombre || "",
-                apellido: perfil.apellido || "",
-                empresa: perfil.empresa || "",
-                email: perfil.email || "",
-                tel: perfil.tel || "",
-                foto: perfil.foto || null,
-                avatar: perfil.nombre ? (perfil.nombre[0]+(perfil.apellido||"?")[0]).toUpperCase() : "??",
-                color: "#2A9D8F",
-                titulo: perfil.titulo || "",
-                ciudad: perfil.ciudad || "",
-                rating: perfil.rating || null,
+                avatar: initials,
+                color: color,
+                skills: perfil.skills || [],
+                obras: perfil.obras || [],
+                disponible: perfil.disponible !== false,
+                tarifa: perfil.tarifa || 0,
+                moneda: perfil.moneda || "ARS",
                 created_at: r.created_at,
               };
             }
-          } catch(e) {}
+          } catch(e) { console.error("Error cargando match:", e); }
           return {
             id: r.user2_id,
             nombre: "Conexión",
