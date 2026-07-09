@@ -155,13 +155,19 @@ const supa = {
   },
 
   async getProfiles(token, rolUsuario) {
+    // Cargamos todos los perfiles del rol opuesto usando la anon key
+    // Los perfiles seed y reales son visibles para todos
     const targetRol = rolUsuario === "empresa" ? "profesional" : "empresa";
     const r = await fetch(
-      SUPA_URL + "/rest/v1/profiles?rol=eq." + targetRol + "&select=*&order=created_at.desc&limit=50",
-      { headers: { ...this.headers, "Authorization": "Bearer " + (token || SUPA_KEY) } }
+      SUPA_URL + "/rest/v1/profiles?rol=eq." + targetRol + "&select=*&order=created_at.desc&limit=300",
+      { headers: { ...this.headers, "Authorization": "Bearer " + SUPA_KEY } }
     );
-    if(!r.ok) return [];
+    if(!r.ok) {
+      console.error("getProfiles error:", await r.text());
+      return [];
+    }
     const d = await r.json();
+    console.log("getProfiles — cargados:", Array.isArray(d) ? d.length : 0, "perfiles de rol:", targetRol);
     return Array.isArray(d) ? d : [];
   },
 
@@ -5453,9 +5459,14 @@ export default function Safy() {
       try {
         const profile = await supa.getProfile(session.token, session.user.id);
         if(profile && profile.rol) {
-          // Usuario existente — cargar perfil y ir a la app
+          // Usuario existente — cargar perfil y completar con foto de Google si no tiene
+          const fotoGoogle = session.user?.user_metadata?.avatar_url ||
+                             session.user?.user_metadata?.picture || null;
           setUserRol(profile.rol);
-          setUserData(profile);
+          setUserData({...profile,
+            foto: profile.foto || fotoGoogle || null,
+            email: profile.email || session.email,
+          });
           setPhase("app");
         } else {
           // Usuario nuevo — ir al onboarding
@@ -5574,7 +5585,14 @@ export default function Safy() {
     } : null} onComplete={async (rol,data)=>{
       setUserRol(rol);
       setPrimerLogin(true);
-      setUserData({...data, email: authData?.email||data.email});
+      // Foto de Google si no subió una propia
+      const fotoGoogle = authData?.user?.user_metadata?.avatar_url ||
+                         authData?.user?.user_metadata?.picture || null;
+      const dataFinal = {...data, 
+        email: authData?.email || data.email,
+        foto: data.foto || fotoGoogle || null,
+      };
+      setUserData(dataFinal);
       // Guardar sesión recién ahora que completó el onboarding
       if(authData) supa.saveSession(authData);
       if(rol==="empresa") {
