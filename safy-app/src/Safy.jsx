@@ -155,11 +155,10 @@ const supa = {
   },
 
   async getProfiles(token, rolUsuario) {
-    // Cargamos todos los perfiles del rol opuesto usando la anon key
-    // Los perfiles seed y reales son visibles para todos
-    const targetRol = rolUsuario === "empresa" ? "profesional" : "empresa";
+    // Traer TODOS los perfiles excepto el propio usuario
+    // Un profesional ve otros profesionales Y empresas
     const r = await fetch(
-      SUPA_URL + "/rest/v1/profiles?rol=eq." + targetRol + "&select=*&order=created_at.desc&limit=300",
+      SUPA_URL + "/rest/v1/profiles?select=*&order=created_at.desc&limit=300",
       { headers: { ...this.headers, "Authorization": "Bearer " + SUPA_KEY } }
     );
     if(!r.ok) {
@@ -167,7 +166,7 @@ const supa = {
       return [];
     }
     const d = await r.json();
-    console.log("getProfiles — cargados:", Array.isArray(d) ? d.length : 0, "perfiles de rol:", targetRol);
+    console.log("getProfiles — cargados:", Array.isArray(d) ? d.length : 0, "perfiles totales");
     return Array.isArray(d) ? d : [];
   },
 
@@ -4011,11 +4010,11 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     });
   };
   // Filtrar bloqueados del swipe
-  // Combinar perfiles reales de DB con demos — reales primero
+  // Separar perfiles de DB por rol
   const todosLosProfesionales = [
     ...dbProfiles.filter(p=>p.rol==="profesional"),
-    ...profesionales.filter(p=>!dbProfiles.find(db=>db.id===p.id))
   ].filter(p=>{
+    if(String(p.id)===String(authData?.user?.id)) return false; // no mostrar el propio perfil
     if(bloqueados.includes(p.id)) return false;
     if(filtros.sector && !p.skills?.some(s=>s.toLowerCase().includes(filtros.sector.toLowerCase()))) return false;
     if(filtros.disponible && !p.disponible) return false;
@@ -4025,7 +4024,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
   const todasLasEmpresas = [
     ...dbProfiles.filter(p=>p.rol==="empresa"),
     ...obras,
-  ];
+  ].filter(p=>{
+    if(String(p.id)===String(authData?.user?.id)) return false;
+    return true;
+  });
 
   // Ordenar: Pro verificados primero, luego el resto
   const profesionalesFiltrados = [...todosLosProfesionales].sort((a,b)=>{
