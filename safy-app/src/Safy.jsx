@@ -8,7 +8,6 @@ const SUPA_KEY = "sb_publishable_JmENOILK3rOPz9-0IqcA1A_1or2An5-";
 // ─── PAGOS ───────────────────────────────────────────────────────────────────
 
 const STRIPE_PK = "pk_test_51Tr1t9Qkrzuq7ECFNPPay8IvwsD2aEVSRERncvMAawdiEAPOXnmk6s1vIYJYVr0CXRxUyLpoGZO4R6tNxsSXEdMW00Mfg4QqCI";
-const MP_PUBLIC_KEY = "APP_USR-6f4a7b96-4f9d-448d-a34f-20ee96ca9ffc";
 
 const STRIPE_LINKS = {
   profesional_mensual: "https://buy.stripe.com/test_14A9AVguA3ie2EnbBBffy00",
@@ -17,40 +16,19 @@ const STRIPE_LINKS = {
   empresa_anual:       "https://buy.stripe.com/test_dRm8wRguA5qm4Mv6hhffy03",
 };
 
-// Links de checkout de Mercado Pago ("Planes de suscripción", sin código).
-// Cómo generarlos (una vez por fila):
-//   1) Panel MP → Tu negocio → Planes de suscripción → Crear nuevo plan
-//   2) Precio y frecuencia: usar los valores de PLANES_MP de abajo
-//   3) En "URL de retorno" pegar EXACTO: https://safyjobs.com/?sub=ok&plan=<clave>
-//      (ej: https://safyjobs.com/?sub=ok&plan=profesional_mensual)
-//      Esto reutiliza el mismo flujo de confirmación que ya usa Stripe (ver el useEffect
-//      "Verificar suscripción activa y retorno de pago" en MainApp).
-//   4) Copiar el link que da MP y pegarlo acá abajo.
-//   5) Pegar el mismo preapproval_plan_id (va en el link, después de "?preapproval_plan_id=")
-//      en PLAN_POR_MP_PLAN_ID dentro de supabase/functions/mercadopago-webhook/index.ts
-//      — si no, el webhook no va a poder activar la suscripción aunque el pago sea real.
-const MP_LINKS = {
-  profesional_mensual: "",
-  profesional_anual:   "",
-  empresa_mensual:     "",
-  empresa_anual:       "",
-};
+// Mercado Pago (descartado): solo puede cobrar en la moneda de la cuenta del
+// vendedor (una cuenta por país, atada a un CUIT/RFC/CNPJ local), y ni España
+// ni EEUU existen como país dentro de MP. Para cobrar en USD a cualquier país
+// se usa únicamente Stripe (ver STRIPE_LINKS/PLANES arriba). Si en el futuro
+// hay volumen real de pagos en Argentina/México/Colombia/Chile/Perú y se
+// justifica abrir cuentas locales de MP, se puede retomar — hay que crear
+// planes de suscripción en cada cuenta país y un webhook por cuenta.
 
 const PLANES = {
   profesional_mensual: { id: "price_1Tr23hQkrzuq7ECF4P9iF6TV", precio: 2.99, moneda: "USD", periodo: "mensual", label: "$2.99/mes" },
   profesional_anual:   { id: "price_1Tr24JQkrzuq7ECF9eAghfLO", precio: 34.18, moneda: "USD", periodo: "anual", label: "$34.18/año" },
   empresa_mensual:     { id: "price_1Tr24iQkrzuq7ECFsygfUf9u", precio: 9.99, moneda: "USD", periodo: "mensual", label: "$9.99/mes" },
   empresa_anual:       { id: "price_1Tr255Qkrzuq7ECFvFVOROvV", precio: 113.89, moneda: "USD", periodo: "anual", label: "$113.89/año" },
-};
-
-// Precios de referencia en ARS para Mercado Pago (conversión aprox. jul-2026, ~1.490 ARS/USD).
-// Mercado Pago liquida en pesos, no en USD, así que Stripe cobra en USD y MP en ARS.
-// Ajustar el monto final en el panel de MP al crear cada plan; esto es solo lo que se muestra en la UI.
-const PLANES_MP = {
-  profesional_mensual: { precio: 4499,   label: "$4.499/mes" },
-  profesional_anual:   { precio: 49999,  label: "$49.999/año" },
-  empresa_mensual:     { precio: 14999,  label: "$14.999/mes" },
-  empresa_anual:       { precio: 169999, label: "$169.999/año" },
 };
 
 // ─── IDIOMA (i18n) ────────────────────────────────────────────────────────────
@@ -104,7 +82,6 @@ const STRINGS = {
     sub_mensual: "Mensual",
     sub_anual: "Anual",
     sub_por_mes: "por mes · cancelá cuando quieras",
-    sub_metodo_label: "Elegí tu método de pago",
     sub_btn_procesando: "Procesando...",
     sub_btn_suscribirme: "Suscribirme por",
     sub_footer: "Pago seguro · Cancelá cuando quieras · Sin permanencia",
@@ -131,14 +108,10 @@ const STRINGS = {
       "🎯 Filtros avanzados de búsqueda",
       "✅ Badge empresa verificada",
     ],
-    metodo_stripe: "Tarjeta internacional",
-    metodo_mp: "MercadoPago",
     plan_no_encontrado: "Plan no encontrado",
-    mp_no_configurado: "MercadoPago para este plan todavía no está configurado. Probá por ahora con tarjeta internacional (Stripe).",
     sub_equivale: "Equivale a",
     sub_ahorras: "Ahorrás",
     sub_mes_abrev: "mes",
-    sub_mp_periodo: "por mes · pago en pesos argentinos · cancelá cuando quieras",
 
     err_password_min: "La contraseña debe tener al menos 6 caracteres",
     err_signup: "Error al registrarse",
@@ -190,7 +163,6 @@ const STRINGS = {
     sub_mensual: "Monthly",
     sub_anual: "Yearly",
     sub_por_mes: "per month · cancel anytime",
-    sub_metodo_label: "Choose your payment method",
     sub_btn_procesando: "Processing...",
     sub_btn_suscribirme: "Subscribe for",
     sub_footer: "Secure payment · Cancel anytime · No commitment",
@@ -217,14 +189,10 @@ const STRINGS = {
       "🎯 Advanced search filters",
       "✅ Verified company badge",
     ],
-    metodo_stripe: "International card",
-    metodo_mp: "MercadoPago",
     plan_no_encontrado: "Plan not found",
-    mp_no_configurado: "MercadoPago isn't set up for this plan yet. Try an international card (Stripe) for now.",
     sub_equivale: "Equals",
     sub_ahorras: "Save",
     sub_mes_abrev: "mo",
-    sub_mp_periodo: "per month · payment in Argentine pesos · cancel anytime",
 
     err_password_min: "Password must be at least 6 characters",
     err_signup: "Error signing up",
@@ -1397,14 +1365,11 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
   const {t} = useLang();
   const [periodo, setPeriodo] = useState("mensual");
   const [loading, setLoading] = useState(false);
-  const [metodo, setMetodo] = useState("stripe"); // 'stripe' o 'mp'
 
   const planKey = rol + "_" + periodo;
   const plan = PLANES[planKey];
   const precioAnual = PLANES[rol + "_anual"];
   const precioMensual = PLANES[rol + "_mensual"];
-  const planMP = PLANES_MP[planKey];
-  const precioMensualMP = PLANES_MP[rol + "_mensual"];
 
   const beneficios = rol === "profesional" ? t("benef_pro") : t("benef_emp");
 
@@ -1416,15 +1381,6 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
       "&client_reference_id=" + (authData?.user?.id||"") +
       "&success_url=" + encodeURIComponent(window.location.origin + "?sub=ok&plan=" + planKey);
     window.location.href = url;
-  };
-
-  const handleMP = () => {
-    const link = MP_LINKS[planKey];
-    if(!link) {
-      alert(t("mp_no_configurado"));
-      return;
-    }
-    window.location.href = link;
   };
 
   return (
@@ -1470,18 +1426,12 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
       {/* Precio */}
       <div style={{textAlign:"center",marginBottom:20}}>
         <div style={{fontSize:48,fontWeight:800,color:"#fff",lineHeight:1}}>
-          {metodo==="mp"
-            ? planMP.precio.toLocaleString("es-AR",{style:"currency",currency:"ARS",maximumFractionDigits:0})
-            : plan.precio.toLocaleString("es-AR",{style:"currency",currency:"USD"})}
+          {plan.precio.toLocaleString("es-AR",{style:"currency",currency:"USD"})}
         </div>
         <div style={{fontSize:13,color:"#8899bb",marginTop:4}}>
-          {metodo==="mp"
-            ? (periodo==="anual"
-                ? `${t("sub_equivale")} ${Math.round(planMP.precio/12).toLocaleString("es-AR")} ARS/${t("sub_mes_abrev")} · ${t("sub_ahorras")} ${(precioMensualMP.precio*12-planMP.precio).toLocaleString("es-AR")} ARS`
-                : t("sub_mp_periodo"))
-            : (periodo==="anual"
-                ? `${t("sub_equivale")} ${(plan.precio/12).toFixed(2)} USD/${t("sub_mes_abrev")} · ${t("sub_ahorras")} ${(precioMensual.precio*12-plan.precio).toFixed(2)} USD`
-                : t("sub_por_mes"))}
+          {periodo==="anual"
+            ? `${t("sub_equivale")} ${(plan.precio/12).toFixed(2)} USD/${t("sub_mes_abrev")} · ${t("sub_ahorras")} ${(precioMensual.precio*12-plan.precio).toFixed(2)} USD`
+            : t("sub_por_mes")}
         </div>
       </div>
 
@@ -1498,35 +1448,16 @@ const PantallaSubscripcion = ({rol, onClose, authData, onSubscribed}) => {
         </div>
       </div>
 
-      {/* Método de pago */}
+      {/* Botón pagar */}
       <div style={{padding:"0 20px",marginBottom:16}}>
-        <div style={{fontSize:12,color:"#8899bb",fontWeight:600,marginBottom:10,textTransform:"uppercase",letterSpacing:.5}}>
-          {t("sub_metodo_label")}
-        </div>
-        <div style={{display:"flex",gap:8,marginBottom:12}}>
-          {[
-            {v:"stripe",l:"💳 "+t("metodo_stripe")},
-            {v:"mp",l:"🔵 "+t("metodo_mp")},
-          ].map(m=>(
-            <button key={m.v} onClick={()=>setMetodo(m.v)}
-              style={{flex:1,padding:"10px 8px",borderRadius:12,fontSize:12,fontWeight:700,
-                border:metodo===m.v?"2px solid #F4A261":"2px solid rgba(255,255,255,0.1)",
-                background:metodo===m.v?"rgba(244,162,97,0.1)":"transparent",
-                color:metodo===m.v?"#F4A261":"#aaa",cursor:"pointer",fontFamily:"inherit"}}>
-              {m.l}
-            </button>
-          ))}
-        </div>
-
-        {/* Botón pagar */}
         <button
-          onClick={metodo==="stripe" ? handleStripe : handleMP}
+          onClick={handleStripe}
           disabled={loading}
           style={{width:"100%",padding:"16px",borderRadius:16,border:"none",
             background:loading?"#444":"linear-gradient(135deg, #F4A261, #e8853d)",
             color:"#1a1a2e",fontWeight:800,fontSize:16,cursor:loading?"not-allowed":"pointer",
             fontFamily:"inherit",boxShadow:"0 4px 20px rgba(244,162,97,0.4)"}}>
-          {loading?t("sub_btn_procesando"):`${t("sub_btn_suscribirme")} ${metodo==="mp"?planMP.label:plan.label}`}
+          {loading?t("sub_btn_procesando"):`${t("sub_btn_suscribirme")} ${plan.label}`}
         </button>
       </div>
 
@@ -1790,176 +1721,42 @@ const BadgeVerificado = ({size=16}) => (
   </svg>
 );
 
-// ─── VERIFICADO ACTIVO ────────────────────────────────────────────────────────
-const VerificadoActivo = ({onCancelar, esEmpresa=false}) => {
-  const [confirmando, setConfirmando] = useState(false);
-  if(confirmando) return (
-    <div style={{background:"#fdecea",borderRadius:14,padding:"14px 16px",marginBottom:10,
-      border:"1.5px solid #E63946"}}>
-      <div style={{fontWeight:700,fontSize:13,color:"#E63946",marginBottom:6}}>Cancelar suscripcion</div>
-      <div style={{fontSize:12,color:"#666",lineHeight:1.5,marginBottom:12}}>
-        Tu verificacion permanecera activa hasta el final del mes en curso.
-      </div>
-      <div style={{display:"flex",gap:8}}>
-        <button onClick={function(){setConfirmando(false);}}
-          style={{flex:1,padding:"9px 0",borderRadius:10,border:"1.5px solid #e0e0ef",
-            background:"#fff",color:"#555",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-          Mantener
-        </button>
-        <button onClick={onCancelar}
-          style={{flex:1,padding:"9px 0",borderRadius:10,border:"none",
-            background:"#E63946",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-          Confirmar cancelacion
-        </button>
-      </div>
-    </div>
-  );
-  return (
-    <div style={{background:"#e8f4ff",borderRadius:14,padding:"12px 16px",marginBottom:10,
-      display:"flex",alignItems:"center",gap:8,border:"1px solid #bee3f8"}}>
-      <BadgeVerificado size={16}/>
-      <div style={{flex:1}}>
-        <div style={{fontWeight:700,fontSize:13,color:"#1D9BF0"}}>
-          {esEmpresa?"Empresa Verificada":"Profesional Verificado"}
-        </div>
-        <div style={{fontSize:11,color:"#5b9bd5"}}>
-          Suscripcion activa · {esEmpresa?"U$D 9.99":"U$D 2.99"}/mes
-        </div>
-      </div>
-      <button onClick={function(){setConfirmando(true);}}
-        style={{background:"none",border:"none",fontSize:11,color:"#aaa",
-          cursor:"pointer",fontFamily:"inherit",textDecoration:"underline",padding:0}}>
-        Cancelar
-      </button>
-    </div>
-  );
-};
-
 // ─── VERIFICACION SECTION ─────────────────────────────────────────────────────
-const VerificacionSection = ({verificado, onVerificar, onCancelar, esEmpresa=false}) => (
+// El badge verificado ya NO es un producto aparte: es un beneficio incluido en
+// el Plan Pro real (Stripe). `verificado` acá es simplemente `esPro`. Si el
+// usuario no es Pro, el botón lleva directo al paywall real (mismo copy que
+// "Descubrí Safy Pro" en el resto de la app, sin mostrar precio de entrada).
+const VerificacionSection = ({verificado, onDescubrirPro, esEmpresa=false}) => (
   <div style={{marginBottom:16}}>
     <div style={{fontSize:12,fontWeight:700,color:"#aaa",textTransform:"uppercase",
       letterSpacing:.5,marginBottom:10}}>
-      Verificacion profesional
+      Verificación profesional
     </div>
     {verificado?(
-      <VerificadoActivo onCancelar={onCancelar} esEmpresa={esEmpresa}/>
+      <div style={{background:"#e8f4ff",borderRadius:14,padding:"12px 16px",
+        display:"flex",alignItems:"center",gap:8,border:"1px solid #bee3f8"}}>
+        <BadgeVerificado size={16}/>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:13,color:"#1D9BF0"}}>
+            {esEmpresa?"Empresa Verificada":"Profesional Verificado"}
+          </div>
+          <div style={{fontSize:11,color:"#5b9bd5"}}>
+            Incluido en tu Plan Pro
+          </div>
+        </div>
+      </div>
     ):(
-      <button onClick={onVerificar}
+      <button onClick={onDescubrirPro}
         style={{width:"100%",padding:13,borderRadius:14,border:"1.5px solid #1D9BF0",
           background:"#fff",color:"#1D9BF0",fontWeight:700,fontSize:13,
           cursor:"pointer",fontFamily:"inherit",
           display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
         <BadgeVerificado size={15}/>
-        {esEmpresa?"Verificá tu empresa · U$D 9.99/mes":"Verificá tu cuenta · U$D 2.99/mes"}
+        Descubrí Safy Pro
       </button>
     )}
   </div>
 );
-
-// ─── MODAL SUSCRIPCION ────────────────────────────────────────────────────────
-const ModalSuscripcion = ({onClose, onSuscribir, esEmpresa=false}) => {
-  const [procesando, setProcesando] = useState(false);
-  const [exito, setExito] = useState(false);
-  const handlePago = function(){
-    setProcesando(true);
-    setTimeout(function(){setProcesando(false);setExito(true);}, 2000);
-    setTimeout(function(){onSuscribir();onClose();}, 3200);
-  };
-  var beneficiosPro = [
-    "Badge azul verificado junto a tu nombre en toda la app",
-    "Prioridad en los resultados — apareces primero",
-    "Mayor credibilidad frente a empresas y profesionales",
-    "Sello de autenticidad que valida tu perfil e identidad",
-    "Estadisticas de visitas y postulaciones a tu perfil",
-    "Acceso anticipado a nuevas oportunidades y funciones",
-  ];
-  var beneficiosEmp = [
-    "Badge azul en tu perfil — demuestra que tu empresa es real y confiable",
-    "Busquedas ilimitadas — publica sin restricciones ni topes mensuales",
-    "Tus avisos aparecen primero y atraen mas postulantes calificados",
-    "Acceso a estadisticas de postulantes, visitas y rendimiento de avisos",
-    "Mayor tasa de respuesta — los profesionales priorizan empresas verificadas",
-    "Sello oficial de Safy que valida la identidad y seriedad de tu organizacion",
-  ];
-  var beneficios = esEmpresa ? beneficiosEmp : beneficiosPro;
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(26,26,46,.92)",zIndex:3000,
-      display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:"#fff",borderRadius:24,padding:28,maxWidth:340,width:"100%",
-        animation:"popIn .3s ease",textAlign:"center",maxHeight:"90vh",overflowY:"auto"}}>
-        {exito?(
-          <>
-            <div style={{fontSize:56,marginBottom:12}}>🎉</div>
-            <div style={{fontWeight:800,fontSize:20,color:"#1a1a2e",marginBottom:6}}>
-              {esEmpresa?"Tu empresa esta verificada":"Sos Profesional Verificado"}
-            </div>
-            <div style={{fontSize:13,color:"#888",lineHeight:1.5}}>
-              {esEmpresa
-                ? "Tu badge azul ya aparece. Ahora podes publicar busquedas ilimitadas."
-                : "Tu badge azul ya aparece en tu perfil."}
-            </div>
-          </>
-        ):(
-          <>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:4}}>
-              <div style={{fontWeight:800,fontSize:20,color:"#1a1a2e"}}>
-                {esEmpresa?"Empresa Verificada":"Profesional Verificado"}
-              </div>
-              <BadgeVerificado size={20}/>
-            </div>
-            <div style={{fontSize:13,color:"#888",marginBottom:14}}>
-              {esEmpresa?"Publica busquedas ilimitadas y genera mas confianza":"Destacate del resto y genera mas confianza"}
-            </div>
-            <div style={{background:"#e8f4ff",borderRadius:14,padding:"12px 14px",marginBottom:14,
-              border:"1.5px solid #1D9BF0",textAlign:"left"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#1D9BF0",marginBottom:6}}>
-                Por que verificarte?
-              </div>
-              <div style={{fontSize:12,color:"#1a4a6e",lineHeight:1.6}}>
-                {esEmpresa
-                  ? "El badge azul transmite la legitimidad y seriedad de tu empresa frente a los profesionales del sector. Las empresas verificadas generan mas postulaciones e inspiran confianza."
-                  : "El badge azul es una señal inmediata de confianza para empresas y profesionales. Los perfiles verificados aparecen primero en las busquedas y generan mas conexiones."}
-              </div>
-            </div>
-            <div style={{background:"#f8f8fc",borderRadius:16,padding:"14px 16px",marginBottom:18,textAlign:"left"}}>
-              {beneficios.map(function(b,i){
-                return (
-                  <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:8}}>
-                    <span style={{color:"#1D9BF0",fontWeight:700,flexShrink:0}}>✓</span>
-                    <span style={{fontSize:13,color:"#444",lineHeight:1.4}}>{b}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{marginBottom:18}}>
-              <div style={{fontSize:22,fontWeight:400,color:"#555",lineHeight:1}}>
-                U$D {esEmpresa?"9.99":"2.99"}<span style={{fontSize:14,color:"#bbb"}}> /mes</span>
-              </div>
-              <div style={{fontSize:12,color:"#aaa",marginTop:6}}>
-                {esEmpresa?"busquedas ilimitadas · cancela cuando quieras":"cancela cuando quieras · menos de un cafe al mes"}
-              </div>
-            </div>
-            <button onClick={handlePago} disabled={procesando}
-              style={{width:"100%",padding:"14px 0",borderRadius:14,border:"none",
-                background:procesando?"#ccc":"#1D9BF0",color:"#fff",fontWeight:800,
-                fontSize:15,cursor:procesando?"not-allowed":"pointer",
-                fontFamily:"inherit",marginBottom:10,display:"flex",
-                alignItems:"center",justifyContent:"center",gap:8}}>
-              {procesando
-                ?<><div style={{width:18,height:18,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"#fff",animation:"spin .7s linear infinite"}}/> Procesando...</>
-                :"Suscribirme ahora"}
-            </button>
-            <button onClick={onClose}
-              style={{background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
-              Ahora no
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // ─── MODAL LEGAL ──────────────────────────────────────────────────────────────
 const ModalLegal = ({tipo, onClose}) => {
@@ -3082,7 +2879,7 @@ const EliminarCuentaSection = ({onConfirm}) => {
 };
 // ─── EDITAR CUENTA ────────────────────────────────────────────────────────────
 
-const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onVerificar,onCancelarVerif}) => {
+const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onDescubrirPro}) => {
   const [d,setD] = useState({...userData});
   const esPro = userRol==="profesional";
   const upd = (k,v) => setD(p=>({...p,[k]:v}));
@@ -3223,8 +3020,7 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onVer
         </button>
         <VerificacionSection
           verificado={verificado}
-          onVerificar={onVerificar}
-          onCancelar={onCancelarVerif}
+          onDescubrirPro={onDescubrirPro}
           esEmpresa={userRol==="empresa"}/>
         <EliminarCuentaSection onConfirm={onLogout||onClose}/>
       </div>
@@ -4154,8 +3950,8 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     setObrasLocales(fn);
     if(setObrasRoot) setObrasRoot(fn);
   }) : setObrasLocales;
-  const [verificado,setVerificado]     = useState(userData.verificado||false);
-  const [showSusc,setShowSusc]         = useState(false);
+  // El badge "verificado" ya no es una compra aparte: es simplemente ser Pro.
+  const verificado = esPro;
   const [editBusq,setEditBusq]         = useState(null);
   const [confirmElim,setConfirmElim]   = useState(null);
   const [estadosPost,setEstadosPost]   = useState({});
@@ -4651,8 +4447,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         onClose={()=>setEditando(false)}
         onLogout={onLogout}
         verificado={verificado}
-        onVerificar={()=>{setEditando(false);setShowSusc(true);}}
-        onCancelarVerif={()=>setVerificado(false)}/>}
+        onDescubrirPro={()=>{setEditando(false);setShowSub(true);}}/>}
       {chatWith&&<ChatWindow match={chatWith} userData={userData} authData={authData} onClose={()=>setChatWith(null)} />}
       {perfilViendo&&(
         <PerfilCompleto persona={perfilViendo} onClose={()=>setPerfilViendo(null)}
@@ -4666,16 +4461,12 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         onReportar={r=>setReportes(p=>[...p,r])}
         onBloquear={p=>{setBloqueados(b=>[...b,p.id]);setMatches(m=>m.filter(x=>x.id!==p.id));toast_("Usuario bloqueado");}}
         onClose={()=>setReportando(null)}/>}
-      {showSusc&&<ModalSuscripcion
-        onClose={function(){setShowSusc(false);}}
-        onSuscribir={function(){setVerificado(true);setUserData(function(d){return {...d,verificado:true};});}}
-        esEmpresa={esEmpresa}/>}
       {(showNueva||editBusq)&&<NuevaBusquedaModal
         userData={userData} uInit={uInit} esEmpresa={esEmpresa}
         verificado={verificado}
         obrasActivas={misObrasEmpresa.filter(function(o){return o.estado!=="pausada";}).length}
         setObras={esEmpresa?setMisObrasEmpresa:setObras} setMisBusquedas={setMisBusquedas}
-        onSuscribir={function(){setShowSusc(true);}}
+        onSuscribir={function(){setShowSub(true);}}
         toast_={toast_}
         busquedaEditar={editBusq?editBusq.busqueda:null}
         idxEditar={editBusq?editBusq.idx:null}
@@ -5305,32 +5096,30 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 </button>
               </div>
             </div>
-            {!verificado&&(
-              <div>
-              {esPro ? (
-                <div style={{background:"linear-gradient(135deg,#F4A261,#e8853d)",borderRadius:14,
-                  padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:20}}>⭐</span>
-                  <div>
-                    <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e"}}>{t("perfil_plan_activo")}</div>
-                    <div style={{fontSize:12,color:"rgba(26,26,46,0.7)"}}>
-                      {suscripcion?.vencimiento ? (lang==="en"?"Renews ":"Vence ") + new Date(suscripcion.vencimiento).toLocaleDateString(lang==="en"?"en-US":"es-AR") : ""}
-                    </div>
+            <div>
+            {esPro ? (
+              <div style={{background:"linear-gradient(135deg,#F4A261,#e8853d)",borderRadius:14,
+                padding:"12px 16px",marginBottom:10,display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:20}}>⭐</span>
+                <div>
+                  <div style={{fontWeight:800,fontSize:14,color:"#1a1a2e"}}>{t("perfil_plan_activo")}</div>
+                  <div style={{fontSize:12,color:"rgba(26,26,46,0.7)"}}>
+                    {suscripcion?.vencimiento ? (lang==="en"?"Renews ":"Vence ") + new Date(suscripcion.vencimiento).toLocaleDateString(lang==="en"?"en-US":"es-AR") : ""}
                   </div>
                 </div>
-              ) : (
-                <button onClick={()=>setShowSub(true)}
-                  style={{width:"100%",padding:14,borderRadius:14,
-                    background:"linear-gradient(135deg,#F4A261,#e8853d)",
-                    border:"none",color:"#1a1a2e",fontWeight:800,fontSize:15,
-                    cursor:"pointer",fontFamily:"inherit",marginBottom:10,
-                    display:"flex",alignItems:"center",justifyContent:"center",gap:8,
-                    boxShadow:"0 4px 16px rgba(244,162,97,0.4)"}}>
-                  ⭐ {t("perfil_descubri_pro")}
-                </button>
-              )}
               </div>
+            ) : (
+              <button onClick={()=>setShowSub(true)}
+                style={{width:"100%",padding:14,borderRadius:14,
+                  background:"linear-gradient(135deg,#F4A261,#e8853d)",
+                  border:"none",color:"#1a1a2e",fontWeight:800,fontSize:15,
+                  cursor:"pointer",fontFamily:"inherit",marginBottom:10,
+                  display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                  boxShadow:"0 4px 16px rgba(244,162,97,0.4)"}}>
+                ⭐ {t("perfil_descubri_pro")}
+              </button>
             )}
+            </div>
             <button onClick={function(){setEditando(true);}}
               style={{width:"100%",padding:15,borderRadius:14,border:"1.5px solid #1a1a2e",
                 background:"#fff",color:"#1a1a2e",fontWeight:800,fontSize:15,cursor:"pointer",fontFamily:"inherit"}}>
