@@ -431,21 +431,72 @@ const supa = {
   },
 
   async deleteMatch(token, userId, targetId) {
-    const r = await fetch(SUPA_URL + "/rest/v1/matches?user1_id=eq." + userId + "&user2_id=eq." + targetId, {
-      method: "DELETE",
-      headers: { ...this.headers, "Authorization": "Bearer " + token }
-    });
+    // Ambos lados del match pueden borrar la conexión — no importa quién la
+    // haya creado originalmente (ver migración "Matches borrar ambos").
+    const r = await fetch(
+      SUPA_URL + "/rest/v1/matches?or=(and(user1_id.eq." + userId + ",user2_id.eq." + targetId +
+        "),and(user1_id.eq." + targetId + ",user2_id.eq." + userId + "))",
+      { method: "DELETE", headers: { ...this.headers, "Authorization": "Bearer " + token } }
+    );
     if(!r.ok) throw new Error(await r.text());
   },
 
   async getMatches(token, userId) {
+    // Trae los matches donde el usuario es cualquiera de las dos partes (antes
+    // solo traía los que él mismo había creado como user1_id, dejando al otro
+    // usuario del match sin visibilidad). "otherId" siempre queda del otro lado.
     const r = await fetch(
-      SUPA_URL + "/rest/v1/matches?user1_id=eq." + userId + "&select=*&order=created_at.desc",
+      SUPA_URL + "/rest/v1/matches?or=(user1_id.eq." + userId + ",user2_id.eq." + userId + ")&select=*&order=created_at.desc",
+      { headers: { ...this.headers, "Authorization": "Bearer " + token } }
+    );
+    if(!r.ok) return [];
+    const d = await r.json();
+    return Array.isArray(d) ? d.map(m=>({
+      ...m,
+      otherId: String(m.user1_id)===String(userId) ? m.user2_id : m.user1_id,
+    })) : [];
+  },
+
+  // Envía un "like" a otro profesional. No crea el match todavía — solo deja
+  // pendiente una notificación que el destinatario tiene que aceptar. Usa
+  // upsert (on_conflict remitente+destinatario) para no duplicar si ya
+  // existía una fila previa entre estos dos usuarios.
+  async enviarLike(token, remitenteId, destinatarioId) {
+    const r = await fetch(
+      SUPA_URL + "/rest/v1/notificaciones?on_conflict=remitente_id,destinatario_id",
+      {
+        method: "POST",
+        headers: { ...this.headers, "Authorization": "Bearer " + token,
+          "Prefer": "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({
+          remitente_id: remitenteId, destinatario_id: String(destinatarioId),
+          tipo: "like", estado: "pendiente", leido: false,
+        })
+      }
+    );
+    if(!r.ok) throw new Error(await r.text());
+  },
+
+  async getNotificaciones(token, userId) {
+    const r = await fetch(
+      SUPA_URL + "/rest/v1/notificaciones?destinatario_id=eq." + userId +
+        "&estado=eq.pendiente&select=*&order=created_at.desc",
       { headers: { ...this.headers, "Authorization": "Bearer " + token } }
     );
     if(!r.ok) return [];
     const d = await r.json();
     return Array.isArray(d) ? d : [];
+  },
+
+  // Marca una notificación como aceptada o rechazada. Solo el destinatario
+  // puede hacerlo (ver policy "Notif responder propias").
+  async responderNotificacion(token, notifId, estado) {
+    const r = await fetch(SUPA_URL + "/rest/v1/notificaciones?id=eq." + notifId, {
+      method: "PATCH",
+      headers: { ...this.headers, "Authorization": "Bearer " + token, "Prefer": "return=minimal" },
+      body: JSON.stringify({ estado })
+    });
+    if(!r.ok) throw new Error(await r.text());
   },
 
   // Guarda/actualiza la valoración que un usuario (rater) le da a otro (rated).
@@ -695,24 +746,29 @@ const Chip = ({children,selected,onClick,color="#1a1a2e"}) => (
   </span>
 );
 
-const Inp = ({label,hint,optional,value,onChange,...rest}) => (
+const Inp = ({label,hint,optional,value,onChange,...rest}) => {
+  const {lang} = useLang();
+  return (
   <div style={{marginBottom:18}}>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
       <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>{label}</label>
-      {optional&&<span style={{fontSize:11,color:"#aaa"}}>Opcional</span>}
+      {optional&&<span style={{fontSize:11,color:"#aaa"}}>{lang==="en"?"Optional":"Opcional"}</span>}
     </div>
     {hint&&<div style={{fontSize:12,color:"#888",marginBottom:6}}>{hint}</div>}
     <input value={value||""} onChange={e=>onChange&&onChange(e.target.value)} {...rest}
       style={{width:"100%",padding:"12px 14px",borderRadius:12,border:"1.5px solid #e0e0ef",
         fontSize:14,color:"#1a1a2e",outline:"none",background:"#fff",boxSizing:"border-box"}}/>
   </div>
-);
+  );
+};
 
-const Sel = ({label,hint,optional,options,value,onChange}) => (
+const Sel = ({label,hint,optional,options,value,onChange}) => {
+  const {lang} = useLang();
+  return (
   <div style={{marginBottom:18}}>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
       <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>{label}</label>
-      {optional&&<span style={{fontSize:11,color:"#aaa"}}>Opcional</span>}
+      {optional&&<span style={{fontSize:11,color:"#aaa"}}>{lang==="en"?"Optional":"Opcional"}</span>}
     </div>
     {hint&&<div style={{fontSize:12,color:"#888",marginBottom:6}}>{hint}</div>}
     <select value={value||""} onChange={e=>onChange(e.target.value)}
@@ -724,13 +780,16 @@ const Sel = ({label,hint,optional,options,value,onChange}) => (
       {options.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
     </select>
   </div>
-);
+  );
+};
 
-const Txt = ({label,hint,optional,example,value,onChange}) => (
+const Txt = ({label,hint,optional,example,value,onChange}) => {
+  const {lang} = useLang();
+  return (
   <div style={{marginBottom:18}}>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
       <label style={{fontSize:13,fontWeight:700,color:"#1a1a2e"}}>{label}</label>
-      {optional&&<span style={{fontSize:11,color:"#aaa"}}>Opcional</span>}
+      {optional&&<span style={{fontSize:11,color:"#aaa"}}>{lang==="en"?"Optional":"Opcional"}</span>}
     </div>
     {hint&&<div style={{fontSize:12,color:"#888",marginBottom:6}}>{hint}</div>}
     <textarea rows={4} value={value||""} onChange={e=>onChange(e.target.value)}
@@ -738,11 +797,12 @@ const Txt = ({label,hint,optional,example,value,onChange}) => (
         fontSize:14,color:"#1a1a2e",outline:"none",background:"#fff",resize:"vertical",
         boxSizing:"border-box",lineHeight:1.5,fontFamily:"inherit"}}/>
     {example&&<div style={{marginTop:8,background:"#fffbf3",borderRadius:10,padding:"10px 12px",borderLeft:"3px solid #F4A261"}}>
-      <div style={{fontSize:11,fontWeight:700,color:"#c97e1a",marginBottom:3}}>Ejemplo</div>
+      <div style={{fontSize:11,fontWeight:700,color:"#c97e1a",marginBottom:3}}>{lang==="en"?"Example":"Ejemplo"}</div>
       <div style={{fontSize:12,color:"#666",lineHeight:1.55,fontStyle:"italic"}}>{example}</div>
     </div>}
   </div>
-);
+  );
+};
 
 const Btn = ({children,onClick,disabled,outline}) => (
   <button onClick={onClick} disabled={disabled}
@@ -912,11 +972,17 @@ const FotoPicker = ({foto, onFoto, color, init, size=80}) => {
 };
 
 
-const SkillSelector = ({selected,onChange,label}) => {
+const SkillSelector = ({selected,onChange,label,especialidad,onEspecialidad}) => {
   const {lang} = useLang();
   const [otroVal,setOtroVal] = useState("");
   const [showOtro,setShowOtro] = useState(false);
-  const toggle = s => onChange(selected.includes(s)?selected.filter(x=>x!==s):[...selected,s]);
+  const toggle = s => {
+    const yaEstaba = selected.includes(s);
+    onChange(yaEstaba?selected.filter(x=>x!==s):[...selected,s]);
+    // Si se deselecciona la skill marcada como especialidad principal, hay
+    // que limpiarla — no puede quedar una especialidad que ya no es una skill.
+    if(yaEstaba && onEspecialidad && especialidad===s) onEspecialidad("");
+  };
   const addOtro = () => {
     const v=otroVal.trim();
     if(v&&!selected.includes(v)){onChange([...selected,v]);setOtroVal("");setShowOtro(false);}
@@ -932,7 +998,7 @@ const SkillSelector = ({selected,onChange,label}) => {
         {SKILLS.map(s=><Chip key={s} selected={selected.includes(s)} onClick={()=>toggle(s)}>{s}</Chip>)}
         {custom.map(s=>(
           <Chip key={s} selected color="#7B2D8B">
-            {s} <span onClick={e=>{e.stopPropagation();onChange(selected.filter(x=>x!==s))}} style={{marginLeft:4,cursor:"pointer"}}>x</span>
+            {s} <span onClick={e=>{e.stopPropagation();onChange(selected.filter(x=>x!==s));if(onEspecialidad&&especialidad===s)onEspecialidad("");}} style={{marginLeft:4,cursor:"pointer"}}>x</span>
           </Chip>
         ))}
         <Chip onClick={()=>setShowOtro(true)} color="#7B2D8B">{lang==="en"?"+ Other":"+ Otro"}</Chip>
@@ -944,6 +1010,24 @@ const SkillSelector = ({selected,onChange,label}) => {
             style={{flex:1,padding:"10px 13px",borderRadius:12,border:"1.5px solid #7B2D8B",fontSize:13,outline:"none"}}/>
           <button onClick={addOtro} style={{padding:"10px 16px",borderRadius:12,background:"#7B2D8B",color:"#fff",border:"none",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+</button>
           <button onClick={()=>setShowOtro(false)} style={{padding:"10px",borderRadius:12,background:"#f0f0f8",border:"none",cursor:"pointer",fontFamily:"inherit"}}>x</button>
+        </div>
+      )}
+      {onEspecialidad && selected.length>0 && (
+        <div style={{marginTop:14,paddingTop:14,borderTop:"1px dashed #e0e0ef"}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:3}}>
+            ⭐ {lang==="en"?"Your main specialty":"Tu especialidad principal"}
+          </div>
+          <div style={{fontSize:11,color:"#888",marginBottom:8}}>
+            {lang==="en"?"The one you want to stand out with in searches":"Con la que querés destacarte en las búsquedas"}
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+            {selected.map(s=>(
+              <Chip key={s} selected={especialidad===s} color="#F4A261"
+                onClick={()=>onEspecialidad(especialidad===s?"":s)}>
+                {especialidad===s?"⭐ ":""}{s}
+              </Chip>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -2165,14 +2249,16 @@ const StepPro2 = ({data,set,onNext}) => {
 const StepPro3 = ({data,set,onNext}) => {
   const {lang} = useLang();
   const [skills,setSkills] = useState(data.skills||[]);
+  const [especialidad,setEspecialidad] = useState(data.especialidad_principal||"");
   const [sectores,setSectores] = useState(data.sectores||[]);
   const [obras,setObras] = useState(data.obras||[]);
-  const next = () => { set({...data,skills,sectores,obras}); onNext(); };
+  const next = () => { set({...data,skills,especialidad_principal:especialidad,sectores,obras}); onNext(); };
   return (
     <div style={{padding:"24px 20px 32px"}}>
       <div style={{fontWeight:800,fontSize:21,color:"#1a1a2e",marginBottom:3}}>{lang==="en"?"Skills and experience":"Habilidades y experiencia"}</div>
       <div style={{color:"#888",fontSize:13,marginBottom:20}}>{lang==="en"?"Choose at least 2 skills":"Elegí al menos 2 skills"}</div>
-      <SkillSelector label={lang==="en"?"Main skills":"Skills principales"} selected={skills} onChange={setSkills}/>
+      <SkillSelector label={lang==="en"?"Main skills":"Skills principales"} selected={skills} onChange={setSkills}
+        especialidad={especialidad} onEspecialidad={setEspecialidad}/>
       <div style={{marginBottom:18}}>
         <label style={{display:"block",fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:8}}>
           {lang==="en"?"Sectors":"Sectores"} <span style={{fontSize:11,color:"#aaa",fontWeight:400}}>{lang==="en"?"Optional":"Opcional"}</span>
@@ -2187,7 +2273,12 @@ const StepPro3 = ({data,set,onNext}) => {
         </div>
       </div>
       <ObrasInput obras={obras} onChange={setObras}/>
-      <Btn onClick={next} disabled={skills.length<2}>{lang==="en"?"Continue":"Continuar"}</Btn>
+      <Btn onClick={next} disabled={skills.length<2||!especialidad}>{lang==="en"?"Continue":"Continuar"}</Btn>
+      {skills.length>=2&&!especialidad&&(
+        <div style={{textAlign:"center",fontSize:12,color:"#F4A261",marginTop:10,fontWeight:600}}>
+          {lang==="en"?"Pick your main specialty above ⭐":"Elegí tu especialidad principal arriba ⭐"}
+        </div>
+      )}
     </div>
   );
 };
@@ -2810,6 +2901,12 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
               {tituloDisplay&&(
                 <div style={{fontSize:13,color:"#666",marginBottom:4}}>{tituloDisplay}</div>
               )}
+              {persona.especialidad_principal&&(
+                <div style={{display:"inline-block",background:"#fff3e0",color:"#c97e1a",
+                  fontSize:11,fontWeight:800,padding:"3px 10px",borderRadius:99,marginBottom:6}}>
+                  ⭐ {lang==="en"?"Specialty: ":"Especialidad: "}{persona.especialidad_principal}
+                </div>
+              )}
               {(persona.ciudad||persona.provincia)&&(
                 <div style={{fontSize:12,color:"#888",marginBottom:6}}>
                   {[persona.ciudad,persona.provincia].filter(Boolean).join(", ")}
@@ -2868,7 +2965,11 @@ const PerfilCompleto = ({persona,onClose,onChat,onValorar,onReportar}) => {
           <div style={{background:"#fff",borderRadius:16,padding:18,boxShadow:"0 2px 10px rgba(0,0,0,0.07)",marginBottom:14}}>
             <div style={{fontSize:13,fontWeight:700,color:"#1a1a2e",marginBottom:12}}>Skills</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
-              {persona.skills.map((s,i)=><Chip key={i}>{s}</Chip>)}
+              {persona.skills.map((s,i)=>(
+                <Chip key={i} selected={s===persona.especialidad_principal} color="#F4A261">
+                  {s===persona.especialidad_principal?"⭐ ":""}{s}
+                </Chip>
+              ))}
             </div>
           </div>
         )}
@@ -3072,7 +3173,8 @@ const EditarCuenta = ({userData,userRol,onSave,onClose,onLogout,verificado,onDes
             <Txt label={lang==="en"?"Brief description":"Descripción breve"} optional value={d.perfil||""}
               onChange={v=>upd("perfil",v)}
               hint={lang==="en"?"Summarize your experience in 2-3 sentences":"Resumí tu experiencia en 2-3 oraciones"}/>
-            <SkillSelector label="Skills" selected={d.skills||[]} onChange={v=>upd("skills",v)}/>
+            <SkillSelector label="Skills" selected={d.skills||[]} onChange={v=>upd("skills",v)}
+              especialidad={d.especialidad_principal||""} onEspecialidad={v=>upd("especialidad_principal",v)}/>
             <ToggleSeguro pais={d.pais||"AR"} value={d.seguro} onChange={v=>upd("seguro",v)}/>
           </div>
         )}
@@ -3192,6 +3294,12 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
                 )}
                 {!isPro&&p.urgente&&<Chip selected color="#E63946">{lang==="en"?"URGENT":"URGENTE"}</Chip>}
               </div>
+              {isPro&&p.especialidad_principal&&(
+                <div style={{display:"inline-block",background:"#fff3e0",color:"#c97e1a",
+                  fontSize:10.5,fontWeight:800,padding:"2px 8px",borderRadius:99,marginTop:4}}>
+                  ⭐ {p.especialidad_principal}
+                </div>
+              )}
               <div style={{fontSize:12,color:"#555",marginTop:5}}>
                 {p.ciudad}{(p.distanciaReal!=null) ? ` · ${p.distanciaReal} km de vos` : p.distancia ? ` · ${p.distancia} km` : ""}
               </div>
@@ -3209,7 +3317,9 @@ const SwipeCard = ({item,type,onSwipe,isTop}) => {
             {isPro?p.perfil:p.descripcion}
           </p>
           <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
-            {(isPro?p.skills:p.requisitos).map((s,i)=><Chip key={i}>{s}</Chip>)}
+            {(isPro?p.skills:p.requisitos).map((s,i)=>(
+              <Chip key={i} selected={isPro&&s===p.especialidad_principal} color="#F4A261">{s}</Chip>
+            ))}
           </div>
           {isPro&&(
             <div style={{background:"#f8f8fc",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
@@ -4129,8 +4239,8 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         const matchesConDatos = await Promise.all(rows.map(async r=>{
           try {
             // Primero buscar en dbProfiles (ya cargados) para evitar requests extra
-            const enCache = dbProfiles.find(p=>String(p.id)===String(r.user2_id));
-            const perfil = enCache || await supa.getProfileById(SUPA_KEY, r.user2_id);
+            const enCache = dbProfiles.find(p=>String(p.id)===String(r.otherId));
+            const perfil = enCache || await supa.getProfileById(SUPA_KEY, r.otherId);
             if(perfil) {
               const initials = perfil.nombre
                 ? (perfil.nombre[0]+(perfil.apellido||"?")[0]).toUpperCase()
@@ -4139,7 +4249,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
               const color = colores[Math.abs((perfil.id||"").charCodeAt(0)||0) % colores.length];
               return {
                 ...perfil, // spread completo del perfil
-                id: r.user2_id,
+                id: r.otherId,
                 avatar: initials,
                 color: color,
                 skills: perfil.skills || [],
@@ -4153,7 +4263,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
             }
           } catch(e) { console.error("Error cargando match:", e); }
           return {
-            id: r.user2_id,
+            id: r.otherId,
             nombre: lang==="en"?"Connection":"Conexión",
             avatar: "?",
             color: "#2A9D8F",
@@ -4172,6 +4282,86 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       toast_(lang==="en"?"We couldn't load your connections. Try reloading the app.":"No pudimos cargar tus conexiones. Probá recargar la app.","#E63946");
     });
   },[authData]);
+
+  // ─── Notificaciones (likes pendientes de aceptar entre profesionales) ─────
+  // El corazón ya no genera un match automático: el destinatario recibe una
+  // notificación acá y solo cuando la acepta se crea la conexión real.
+  const [notifs,setNotifs]           = useState([]);
+  const [showNotifs,setShowNotifs]   = useState(false);
+  const [resolviendoNotif,setResolviendoNotif] = useState(null);
+
+  const cargarNotifs = async () => {
+    if(!authData?.token || !authData?.user?.id || esEmpresa) return;
+    try {
+      const rows = await supa.getNotificaciones(authData.token, authData.user.id);
+      const conDatos = await Promise.all(rows.map(async r=>{
+        const enCache = dbProfiles.find(p=>String(p.id)===String(r.remitente_id));
+        const perfil = enCache || await supa.getProfileById(SUPA_KEY, r.remitente_id).catch(()=>null);
+        return {
+          ...r,
+          nombre: perfil?.nombre ? (perfil.nombre+" "+(perfil.apellido||"")).trim() : (lang==="en"?"A professional":"Un profesional"),
+          avatar: perfil?.nombre ? (perfil.nombre[0]+(perfil.apellido?perfil.apellido[0]:"")).toUpperCase() : "?",
+          foto: perfil?.foto || "",
+          especialidad_principal: perfil?.especialidad_principal || "",
+        };
+      }));
+      setNotifs(conDatos);
+    } catch(e) { console.error("Error cargando notificaciones:", e); }
+  };
+  useEffect(()=>{ cargarNotifs(); },[authData]);
+
+  const aceptarNotif = async (n) => {
+    if(!authData?.token || !authData?.user?.id) return;
+    setResolviendoNotif(n.id);
+    try {
+      await supa.recordMatch(authData.token, authData.user.id, n.remitente_id);
+      await supa.responderNotificacion(authData.token, n.id, "aceptada");
+      setNotifs(prev=>prev.filter(x=>x.id!==n.id));
+      const enCache = dbProfiles.find(p=>String(p.id)===String(n.remitente_id));
+      const nuevoMatch = enCache || {
+        id: n.remitente_id, nombre: n.nombre, avatar: n.avatar, foto: n.foto,
+        especialidad_principal: n.especialidad_principal, color: "#2A9D8F",
+      };
+      setMatches(prev=>prev.some(m=>String(m.id)===String(n.remitente_id)) ? prev : [...prev,{...nuevoMatch,id:n.remitente_id}]);
+      setShowNotifs(false);
+      setTimeout(()=>setMatchPop({...nuevoMatch,id:n.remitente_id}),250);
+    } catch(e) {
+      console.error("Error aceptando notificación:", e);
+      toast_(lang==="en"?"Couldn't accept — try again":"No se pudo aceptar — probá de nuevo","#E63946");
+    }
+    setResolviendoNotif(null);
+  };
+
+  const rechazarNotif = async (n) => {
+    if(!authData?.token || !authData?.user?.id) return;
+    setResolviendoNotif(n.id);
+    try {
+      await supa.responderNotificacion(authData.token, n.id, "rechazada");
+      setNotifs(prev=>prev.filter(x=>x.id!==n.id));
+    } catch(e) {
+      console.error("Error rechazando notificación:", e);
+      toast_(lang==="en"?"Couldn't dismiss — try again":"No se pudo rechazar — probá de nuevo","#E63946");
+    }
+    setResolviendoNotif(null);
+  };
+
+  // Envía un like a otro profesional. No matchea al toque — le llega como
+  // notificación pendiente y el match recién se forma si él lo acepta.
+  const enviarLike = async (cur) => {
+    if(!authData?.token || !authData?.user?.id) {
+      toast_(lang==="en"?"Interest sent!":"Interés enviado!");
+      return;
+    }
+    try {
+      await supa.enviarLike(authData.token, authData.user.id, cur.id);
+      toast_(lang==="en"
+        ?"❤️ Sent — we'll let you know if "+(cur.nombre||"they")+" accepts"
+        :"❤️ Enviado — te avisamos si "+(cur.nombre||"")+" acepta");
+    } catch(e) {
+      console.error("Error enviando like:", e);
+      toast_(lang==="en"?"Couldn't send it, try again":"No se pudo enviar, probá de nuevo","#E63946");
+    }
+  };
 
   // IMPORTANTE: la activación real de la suscripción la hace el backend
   // (Supabase Edge Function) al recibir y verificar el webhook de Stripe,
@@ -4315,17 +4505,24 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
     try { localStorage.setItem("safy_swipes_"+authData?.user?.id, JSON.stringify(nuevoSwipeados)); } catch(e) {}
 
     if(dir==="yes"){
-      // Perfiles semilla: matchean 1 de cada 10 (antes matcheaba ~6 de cada 10 y se sentía
-      // artificial). Perfiles reales: se mantiene la probabilidad de antes.
-      const chanceMatch = cur.esSeed ? 0.10 : 0.6;
-      if(Math.random()<chanceMatch){
-        setMatches(m=>[...m,cur]);
-        setTimeout(()=>setMatchPop(cur),300);
-        if(authData?.token && authData?.user?.id) {
-          supa.recordMatch(authData.token, authData.user.id, cur.id)
-            .catch(e=>console.error("Error guardando match en Supabase:", e));
-        }
-      } else toast_(lang==="en"?"Interest sent!":"Interés enviado!");
+      if(vista==="profesional" && !cur.esSeed){
+        // Profesionales reales: el corazón ya no matchea directo — se manda
+        // como notificación pendiente y el match se forma recién si el otro
+        // profesional la acepta desde su campanita.
+        enviarLike(cur);
+      } else {
+        // Perfiles semilla (nadie real detrás para "aceptar") y vista de
+        // empresas: se mantiene la simulación de siempre.
+        const chanceMatch = cur.esSeed ? 0.10 : 0.6;
+        if(Math.random()<chanceMatch){
+          setMatches(m=>[...m,cur]);
+          setTimeout(()=>setMatchPop(cur),300);
+          if(authData?.token && authData?.user?.id) {
+            supa.recordMatch(authData.token, authData.user.id, cur.id)
+              .catch(e=>console.error("Error guardando match en Supabase:", e));
+          }
+        } else toast_(lang==="en"?"Interest sent!":"Interés enviado!");
+      }
     }
     setIdx(i=>i+1);
   };
@@ -4519,21 +4716,21 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         onSave={async d=>{
           setUserData(d);
           setEditando(false);
-          toast_("Perfil actualizado ✓");
+          toast_(lang==="en"?"Profile updated ✓":"Perfil actualizado ✓");
           if(authData?.token && authData?.user?.id) {
             try {
               let fotoUrl = d.foto || null;
               // Si la foto es base64, subirla a Storage
               if(fotoUrl && fotoUrl.startsWith("data:")) {
-                toast_("Subiendo foto...");
+                toast_(lang==="en"?"Uploading photo...":"Subiendo foto...");
                 const url = await supa.uploadFoto(authData.token, authData.user.id, fotoUrl);
                 if(url) {
                   fotoUrl = url;
                   setUserData(prev=>({...prev, foto: url}));
-                  toast_("Foto guardada ✓");
+                  toast_(lang==="en"?"Photo saved ✓":"Foto guardada ✓");
                 } else {
                   fotoUrl = null;
-                  toast_("No se pudo guardar la foto");
+                  toast_(lang==="en"?"Couldn't save the photo":"No se pudo guardar la foto");
                 }
               }
               await supa.upsertProfile(authData.token, {
@@ -4551,6 +4748,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 tarifa: d.tarifa ? Number(d.tarifa) : null,
                 moneda: d.moneda || "ARS",
                 skills: d.skills || [],
+                especialidad_principal: d.especialidad_principal || null,
                 perfil: d.perfil || null,
                 disponible: d.disponibilidad === "disponible" || d.disponible === true,
                 disponibilidad: d.disponibilidad || null,
@@ -4577,7 +4775,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         persona={reportando}
         userData={userData}
         onReportar={r=>setReportes(p=>[...p,r])}
-        onBloquear={p=>{setBloqueados(b=>[...b,p.id]);setMatches(m=>m.filter(x=>x.id!==p.id));toast_("Usuario bloqueado");}}
+        onBloquear={p=>{setBloqueados(b=>[...b,p.id]);setMatches(m=>m.filter(x=>x.id!==p.id));toast_(lang==="en"?"User blocked":"Usuario bloqueado");}}
         onClose={()=>setReportando(null)}/>}
       {(showNueva||editBusq)&&<NuevaBusquedaModal
         userData={userData} uInit={uInit} esEmpresa={esEmpresa}
@@ -4596,7 +4794,7 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
       {verificandoPago&&(
         <div style={{background:"#F4A261",color:"#1a1a2e",padding:"8px 16px",
           fontSize:12,fontWeight:700,textAlign:"center",position:"sticky",top:0,zIndex:101}}>
-          ⏳ Confirmando tu pago con el banco/procesador… no cierres la app
+          ⏳ {lang==="en"?"Confirming your payment with the bank/processor… don't close the app":"Confirmando tu pago con el banco/procesador… no cierres la app"}
         </div>
       )}
       {/* HEADER */}
@@ -4615,28 +4813,87 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
         <div style={{fontWeight:800,fontSize:24,letterSpacing:-.5,textAlign:"center"}}>
           S<span style={{color:"#F4A261"}}>afy</span>
         </div>
-        <div style={{flex:1,display:"flex",justifyContent:"flex-end"}}>
+        <div style={{flex:1,display:"flex",justifyContent:"flex-end",alignItems:"center",gap:8}}>
+          {!esEmpresa&&(
+            <button onClick={()=>setShowNotifs(v=>!v)}
+              title={lang==="en"?"Notifications":"Notificaciones"}
+              style={{position:"relative",background:"rgba(255,255,255,0.15)",border:"none",
+                borderRadius:99,width:32,height:32,color:"#fff",fontSize:15,cursor:"pointer",
+                fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              🔔
+              {notifs.length>0&&(
+                <span style={{position:"absolute",top:-3,right:-3,background:"#E63946",
+                  color:"#fff",fontSize:10,fontWeight:800,borderRadius:99,minWidth:16,height:16,
+                  display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px",
+                  border:"1.5px solid #1a1a2e"}}>
+                  {notifs.length>9?"9+":notifs.length}
+                </span>
+              )}
+            </button>
+          )}
           {tab==="perfil"?(
             <button onClick={onLogout}
               style={{background:"rgba(255,255,255,0.15)",border:"none",borderRadius:99,
                 padding:"7px 13px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",
                 fontFamily:"inherit"}}>
-              Salir
+              {lang==="en"?"Log out":"Salir"}
             </button>
           ):esEmpresa&&tab==="mis_busquedas"?(
             <button onClick={function(){setShowNueva(true);setEditBusq(null);}}
               style={{background:"#F4A261",border:"none",borderRadius:99,
                 padding:"7px 14px",color:"#1a1a2e",fontSize:12,fontWeight:800,
                 cursor:"pointer",fontFamily:"inherit"}}>
-              + Nuevo aviso
+              {lang==="en"?"+ New listing":"+ Nuevo aviso"}
             </button>
-          ):(
-            <div style={{width:60}}/>
+          ):!esEmpresa?null:(
+            <div style={{width:32}}/>
           )}
         </div>
       </div>
 
-      <div style={{flex:1,padding:"16px 0 80px",overflowY:"auto"}}>
+      {showNotifs&&!esEmpresa&&(
+        <div style={{position:"fixed",top:56,right:"max(12px,calc(50% - 198px))",width:"calc(100% - 24px)",
+          maxWidth:360,maxHeight:"70vh",overflowY:"auto",background:"#fff",borderRadius:16,
+          boxShadow:"0 8px 30px rgba(0,0,0,0.25)",zIndex:200,padding:"6px 0"}}>
+          <div style={{padding:"10px 16px",fontWeight:800,fontSize:14,color:"#1a1a2e",
+            borderBottom:"1px solid #f0f0f0"}}>
+            {lang==="en"?"Notifications":"Notificaciones"}
+          </div>
+          {notifs.length===0?(
+            <div style={{padding:"24px 16px",textAlign:"center",color:"#aaa",fontSize:13}}>
+              {lang==="en"?"No pending requests":"No tenés solicitudes pendientes"}
+            </div>
+          ):notifs.map(n=>(
+            <div key={n.id} style={{padding:"12px 16px",borderBottom:"1px solid #f5f5f5",
+              display:"flex",gap:10,alignItems:"center"}}>
+              <Av init={n.avatar} color="#F4A261" size={40} foto={n.foto||""}/>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,color:"#1a1a2e",lineHeight:1.35}}>
+                  <strong>{n.nombre}</strong> {lang==="en"?"wants to connect with you":"quiere contactarse con vos"}
+                  {n.especialidad_principal&&(" · ⭐ "+n.especialidad_principal)}
+                </div>
+                <div style={{display:"flex",gap:6,marginTop:8}}>
+                  <button disabled={resolviendoNotif===n.id} onClick={()=>aceptarNotif(n)}
+                    style={{flex:1,padding:"7px 0",borderRadius:10,border:"none",background:"#2A9D8F",
+                      color:"#fff",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",
+                      opacity:resolviendoNotif===n.id?0.6:1}}>
+                    {lang==="en"?"Accept":"Aceptar"}
+                  </button>
+                  <button disabled={resolviendoNotif===n.id} onClick={()=>rechazarNotif(n)}
+                    style={{flex:1,padding:"7px 0",borderRadius:10,border:"1.5px solid #e0e0ef",
+                      background:"#fff",color:"#888",fontWeight:700,fontSize:12,cursor:"pointer",
+                      fontFamily:"inherit",opacity:resolviendoNotif===n.id?0.6:1}}>
+                    {lang==="en"?"Dismiss":"Rechazar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{flex:1,padding:"16px 0 80px",overflowY:"auto"}}
+        onClick={()=>showNotifs&&setShowNotifs(false)}>
 
         {/* SWIPE */}
         {tab==="swipe"&&!esEmpresa&&(
@@ -4645,17 +4902,17 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
             {showFiltros&&(
               <div style={{background:"#fff",borderRadius:16,padding:16,marginBottom:14,
                 boxShadow:"0 2px 10px rgba(0,0,0,0.08)"}}>
-                <div style={{fontWeight:700,fontSize:14,color:"#1a1a2e",marginBottom:12}}>Filtrar resultados</div>
+                <div style={{fontWeight:700,fontSize:14,color:"#1a1a2e",marginBottom:12}}>{lang==="en"?"Filter results":"Filtrar resultados"}</div>
                 <div style={{marginBottom:12}}>
                   <div style={{fontSize:12,fontWeight:700,color:"#888",marginBottom:6,textTransform:"uppercase"}}>Skill / Sector</div>
                   <input value={filtros.sector} onChange={e=>setFiltros(f=>({...f,sector:e.target.value}))}
-                    placeholder="Ej: Altura, NFPA, Ambiental..."
+                    placeholder={lang==="en"?"E.g.: Heights, NFPA, Environmental...":"Ej: Altura, NFPA, Ambiental..."}
                     style={{width:"100%",padding:"10px 12px",borderRadius:10,
                       border:"1.5px solid #e0e0ef",fontSize:13,fontFamily:"inherit",
                       boxSizing:"border-box"}}/>
                 </div>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                  <div style={{fontSize:13,fontWeight:600,color:"#1a1a2e"}}>Solo disponibles ahora</div>
+                  <div style={{fontSize:13,fontWeight:600,color:"#1a1a2e"}}>{lang==="en"?"Only available now":"Solo disponibles ahora"}</div>
                   <button onClick={()=>setFiltros(f=>({...f,disponible:!f.disponible}))}
                     style={{width:44,height:26,borderRadius:99,border:"none",
                       background:filtros.disponible?"#2A9D8F":"#e0e0ef",cursor:"pointer",
@@ -4667,21 +4924,21 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                 <button onClick={()=>{setFiltros({sector:"",disponible:false});setShowFiltros(false);}}
                   style={{fontSize:12,color:"#aaa",background:"none",border:"none",
                     cursor:"pointer",fontFamily:"inherit",padding:0}}>
-                  Limpiar filtros
+                  {lang==="en"?"Clear filters":"Limpiar filtros"}
                 </button>
               </div>
             )}
             <div style={{fontSize:13,color:"#888",marginBottom:14}}>
-              {vista==="profesional"?"Profesionales cerca tuyo":"Empresas buscando"} · {remaining.length} restantes
+              {vista==="profesional"?(lang==="en"?"Professionals near you":"Profesionales cerca tuyo"):(lang==="en"?"Companies searching":"Empresas buscando")} · {remaining.length} {lang==="en"?"left":"restantes"}
             </div>
             {remaining.length===0?(
               <div style={{textAlign:"center",padding:"60px 20px"}}>
                 <div style={{fontSize:48,marginBottom:10}}>✓</div>
-                <div style={{fontWeight:700,fontSize:16,color:"#1a1a2e"}}>Viste todos los perfiles</div>
+                <div style={{fontWeight:700,fontSize:16,color:"#1a1a2e"}}>{lang==="en"?"You've seen all the profiles":"Viste todos los perfiles"}</div>
                 <button onClick={()=>setIdx(0)}
                   style={{marginTop:20,background:"#1a1a2e",color:"#fff",border:"none",
                     borderRadius:99,padding:"12px 28px",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                  Recargar
+                  {lang==="en"?"Reload":"Recargar"}
                 </button>
               </div>
             ):(
@@ -4705,10 +4962,10 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                     ✕
                   </button>
                   <button onClick={()=>swipe("yes")}
-                    style={{width:56,height:56,borderRadius:"50%",border:"1.5px solid #2A9D8F",
-                      background:"#fff",color:"#2A9D8F",fontSize:20,cursor:"pointer",
+                    style={{width:56,height:56,borderRadius:"50%",border:"1.5px solid #E63946",
+                      background:"#fff",color:"#E63946",fontSize:22,cursor:"pointer",
                       fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                    ✓
+                    ❤
                   </button>
                 </div>
                 <div style={{textAlign:"center",color:"#bbb",fontSize:12}}>
@@ -5058,6 +5315,12 @@ const MainApp = ({userRol,userData:init0,authData,obras:initObras,setObrasRoot,o
                   {!esEmpresa&&(userData.titulo||userData.tituloSyH)&&(
                     <div style={{color:"#1a1a2e",fontSize:14,fontWeight:600,marginTop:2}}>
                       {TITULOS[userData.titulo||userData.tituloSyH]||(lang==="en"?"Professional":"Profesional")}
+                    </div>
+                  )}
+                  {!esEmpresa&&userData.especialidad_principal&&(
+                    <div style={{display:"inline-block",background:"#fff3e0",color:"#c97e1a",
+                      fontSize:11,fontWeight:800,padding:"3px 10px",borderRadius:99,marginTop:5}}>
+                      ⭐ {lang==="en"?"Specialty: ":"Especialidad: "}{userData.especialidad_principal}
                     </div>
                   )}
                   {esEmpresa&&userData.contacto&&(
@@ -5932,6 +6195,7 @@ export default function Safy() {
           tarifa: data.tarifa ? Number(data.tarifa) : null,
           moneda: data.moneda || "ARS",
           skills: data.skills || [],
+          especialidad_principal: data.especialidad_principal || null,
           perfil: data.descripcion || null,
           disponible: true,
           lat: data.lat || null,
